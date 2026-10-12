@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="CSE-E Important Dates & Deadlines Portal - Stay updated with exams, assignments, labs, and department announcements.">
+  <title>CSE - E | Important Dates & Academic Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Ambient background glow elements -->
+  <div class="glow-orb orb-1"></div>
+  <div class="glow-orb orb-2"></div>
+  <div class="glow-orb orb-3"></div>
+
+  <!-- Announcement Bar -->
+  <aside class="announcement-bar" id="announcementBar">
+    <div class="announcement-content">
+      <span class="badge-pulse">URGENT</span>
+      <p id="announcementText">Mid-Semester Exam schedule is out. Check updated dates below!</p>
+    </div>
+    <button class="close-announcement" id="closeAnnouncement" aria-label="Dismiss announcement">&times;</button>
+  </aside>
+
+  <!-- Header Section -->
+  <header class="header">
+    <div class="container header-container">
+      <div class="brand">
+        <div class="brand-badge">
+          <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+          <span>DEPARTMENT OF CSE &bull; SECTION E</span>
+        </div>
+        <h1 class="portal-title">Important Dates & Schedules</h1>
+        <p class="portal-subtitle">Real-time academic tracker for exams, project milestones, assignment deadlines, and college events.</p>
+      </div>
+
+      <div class="header-right">
+        <div class="live-clock-card">
+          <div class="clock-label">CURRENT TIME (IST)</div>
+          <div class="clock-time" id="liveClock">--:--:--</div>
+          <div class="clock-date" id="liveDate">Loading date...</div>
+        </div>
+        <button class="btn btn-primary" id="openAddModalBtn">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Add Important Date
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Quick Stats Overview -->
+  <section class="stats-section">
+    <div class="container stats-grid">
+      <div class="stat-card" data-stat="urgent">
+        <div class="stat-icon exam-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value" id="statDueSoon">0</span>
+          <span class="stat-title">Due in 7 Days</span>
+        </div>
+      </div>
+
+      <div class="stat-card" data-stat="exams">
+        <div class="stat-icon test-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value" id="statExams">0</span>
+          <span class="stat-title">Upcoming Exams</span>
+        </div>
+      </div>
+
+      <div class="stat-card" data-stat="assignments">
+        <div class="stat-icon assign-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value" id="statAssignments">0</span>
+          <span class="stat-title">Assignments / Labs</span>
+        </div>
+      </div>
+
+      <div class="stat-card" data-stat="total">
+        <div class="stat-icon all-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value" id="statTotal">0</span>
+          <span class="stat-title">Total Active Events</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Controls & Filter Bar -->
+  <main class="main-content">
+    <div class="container">
+      <div class="filter-wrapper">
+        <div class="search-box">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="searchInput" placeholder="Search by subject, title, or room (e.g. DBMS, Lab 3)..." autocomplete="off">
+          <button class="clear-search" id="clearSearch" aria-label="Clear search" style="display: none;">&times;</button>
+        </div>
+
+        <div class="view-toggles">
+          <div class="tab-group" id="viewModeGroup">
+            <button class="tab-btn active" data-view="grid" id="gridViewBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="7"></rect>
+                <rect x="14" y="3" width="7" height="7"></rect>
+                <rect x="14" y="14" width="7" height="7"></rect>
+                <rect x="3" y="14" width="7" height="7"></rect>
+              </svg>
+              Cards
+            </button>
+            <button class="tab-btn" data-view="timeline" id="timelineViewBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="3" x2="12" y2="21"></line>
+                <circle cx="12" cy="7" r="3"></circle>
+                <circle cx="12" cy="17" r="3"></circle>
+              </svg>
+              Timeline
+            </button>
+          </div>
+
+          <div class="sort-select-wrapper">
+            <select id="sortSelect" aria-label="Sort dates">
+              <option value="date-asc">Date: Nearest first</option>
+              <option value="date-desc">Date: Furthest first</option>
+              <option value="title-asc">Title: A to Z</option>
+              <option value="priority">Priority: Urgent first</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Category Filter Pills -->
+      <div class="category-pills" id="categoryPills">
+        <button class="pill-btn active" data-category="all">All Events</button>
+        <button class="pill-btn" data-category="exam">Exams & Tests</button>
+        <button class="pill-btn" data-category="assignment">Assignments</button>
+        <button class="pill-btn" data-category="project">Projects & Reviews</button>
+        <button class="pill-btn" data-category="holiday">Holidays & Breaks</button>
+        <button class="pill-btn" data-category="event">Events & Fests</button>
+      </div>
+
+      <!-- Events Container -->
+      <div class="content-display">
+        <!-- Grid View -->
+        <div class="events-grid" id="eventsGrid">
+          <!-- Dynamically populated via JS -->
+        </div>
+
+        <!-- Timeline View (hidden initially) -->
+        <div class="events-timeline" id="eventsTimeline" style="display: none;">
+          <!-- Dynamically populated via JS -->
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state" id="emptyState" style="display: none;">
+          <div class="empty-icon">📅</div>
+          <h3>No events match your criteria</h3>
+          <p>Try searching for different keywords or clear the active category filters.</p>
+          <button class="btn btn-secondary" id="resetFiltersBtn">Reset Filters</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal for Adding / Editing Date -->
+  <div class="modal-overlay" id="eventModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modalTitle">Add Important Date</h3>
+        <button class="modal-close-btn" id="closeModalBtn" aria-label="Close dialog">&times;</button>
+      </div>
+
+      <form id="eventForm" class="modal-body">
+        <input type="hidden" id="eventId">
+
+        <div class="form-group">
+          <label for="eventTitle">Event / Exam Title <span class="required">*</span></label>
+          <input type="text" id="eventTitle" placeholder="e.g. Operating Systems Lab Exam" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="eventCategory">Category <span class="required">*</span></label>
+            <select id="eventCategory" required>
+              <option value="exam">Exam / Quiz</option>
+              <option value="assignment">Assignment / Homework</option>
+              <option value="project">Project Review / Submission</option>
+              <option value="holiday">Holiday / Vacation</option>
+              <option value="event">Seminar / Hackathon / Fest</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="eventPriority">Priority <span class="required">*</span></label>
+            <select id="eventPriority" required>
+              <option value="high">High (Red)</option>
+              <option value="medium" selected>Medium (Amber)</option>
+              <option value="low">Low (Blue)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="eventDate">Date <span class="required">*</span></label>
+            <input type="date" id="eventDate" required>
+          </div>
+
+          <div class="form-group">
+            <label for="eventTime">Time (optional)</label>
+            <input type="time" id="eventTime">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="eventLocation">Venue / Location / Platform</label>
+          <input type="text" id="eventLocation" placeholder="e.g. Lab 402 / Google Classroom / Audi-1">
+        </div>
+
+        <div class="form-group">
+          <label for="eventDesc">Description & Instructions</label>
+          <textarea id="eventDesc" rows="3" placeholder="Syllabus units, submission links, guidelines or faculty instructions..."></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="cancelModalBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="saveEventBtn">Save Date</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div class="toast" id="toastNotification" role="alert"></div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container footer-content">
+      <div class="footer-left">
+        <p><strong>CSE - Section E</strong> &bull; Academic Notice Board &amp; Schedule Portal</p>
+        <p class="text-muted">Designed for fast access to critical dates and semester milestones.</p>
+      </div>
+      <div class="footer-actions">
+        <button class="btn btn-sm btn-ghost" id="restoreDefaultsBtn">Reset to Sample Dates</button>
+        <button class="btn btn-sm btn-ghost" id="exportDatesBtn">Export (.JSON)</button>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
