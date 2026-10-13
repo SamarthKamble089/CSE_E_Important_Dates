@@ -3,27 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="CSE-E Important Dates & Deadlines Portal - Stay updated with exams, assignments, labs, and department announcements.">
-  <title>CSE - E | Important Dates & Academic Portal</title>
+  <meta name="description" content="CSE-E Academic Schedules & Important Dates - View-only portal synced with offline Excel sheet.">
+  <title>CSE - E | Important Dates & Schedules</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <!-- SheetJS local offline script with CDN fallback -->
+  <script src="xlsx.full.min.js"></script>
 </head>
-<body>
+<body class="view-page">
   <!-- Ambient background glow elements -->
   <div class="glow-orb orb-1"></div>
   <div class="glow-orb orb-2"></div>
   <div class="glow-orb orb-3"></div>
-
-  <!-- Announcement Bar -->
-  <aside class="announcement-bar" id="announcementBar">
-    <div class="announcement-content">
-      <span class="badge-pulse">URGENT</span>
-      <p id="announcementText">Mid-Semester Exam schedule is out. Check updated dates below!</p>
-    </div>
-    <button class="close-announcement" id="closeAnnouncement" aria-label="Dismiss announcement">&times;</button>
-  </aside>
 
   <!-- Header Section -->
   <header class="header">
@@ -36,73 +29,31 @@
           <span>DEPARTMENT OF CSE &bull; SECTION E</span>
         </div>
         <h1 class="portal-title">Important Dates & Schedules</h1>
-        <p class="portal-subtitle">Real-time academic tracker for exams, project milestones, assignment deadlines, and college events.</p>
+        <p class="portal-subtitle">Live notice board for assignment deadlines, exams, and milestones &bull; Read-only portal</p>
       </div>
 
       <div class="header-right">
         <div class="live-clock-card">
           <div class="clock-label">CURRENT TIME (IST)</div>
           <div class="clock-time" id="liveClock">--:--:--</div>
-          <div class="clock-date" id="liveDate">Loading date...</div>
+          <div class="clock-date" id="liveDate">Loading...</div>
         </div>
-        <button class="btn btn-primary" id="openAddModalBtn">
+        <a href="editor.html" class="btn btn-secondary nav-action-btn" id="manageDatesBtn" title="Open the Excel update page">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
           </svg>
-          Add Important Date
-        </button>
+          <span>Update Excel Sheet</span>
+        </a>
       </div>
     </div>
   </header>
 
-  <!-- Quick Stats Overview -->
+  <!-- Quick Status Summary Cards -->
   <section class="stats-section">
-    <div class="container stats-grid">
-      <div class="stat-card" data-stat="urgent">
-        <div class="stat-icon exam-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"></circle>
-            <polyline points="12 6 12 12 16 14"></polyline>
-          </svg>
-        </div>
-        <div class="stat-info">
-          <span class="stat-value" id="statDueSoon">0</span>
-          <span class="stat-title">Due in 7 Days</span>
-        </div>
-      </div>
-
-      <div class="stat-card" data-stat="exams">
-        <div class="stat-icon test-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-            <polyline points="14 2 14 8 20 8"></polyline>
-            <line x1="16" y1="13" x2="8" y2="13"></line>
-            <line x1="16" y1="17" x2="8" y2="17"></line>
-            <polyline points="10 9 9 9 8 9"></polyline>
-          </svg>
-        </div>
-        <div class="stat-info">
-          <span class="stat-value" id="statExams">0</span>
-          <span class="stat-title">Upcoming Exams</span>
-        </div>
-      </div>
-
-      <div class="stat-card" data-stat="assignments">
-        <div class="stat-icon assign-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-            <polyline points="22 4 12 14.01 9 11.01"></polyline>
-          </svg>
-        </div>
-        <div class="stat-info">
-          <span class="stat-value" id="statAssignments">0</span>
-          <span class="stat-title">Assignments / Labs</span>
-        </div>
-      </div>
-
-      <div class="stat-card" data-stat="total">
-        <div class="stat-icon all-icon">
+    <div class="container stats-grid-view">
+      <div class="stat-card">
+        <div class="stat-icon total-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
             <line x1="16" y1="2" x2="16" y2="6"></line>
@@ -111,158 +62,160 @@
           </svg>
         </div>
         <div class="stat-info">
-          <span class="stat-value" id="statTotal">0</span>
-          <span class="stat-title">Total Active Events</span>
+          <span class="stat-value" id="statTotalCount">0</span>
+          <span class="stat-title">Total Schedules</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon urgent-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value" id="statDueSoon">--</span>
+          <span class="stat-title">Upcoming Deadline</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon subject-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+          </svg>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value" id="statSubjectsCount">0</span>
+          <span class="stat-title">Active Subjects</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon sync-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value sync-tag" id="syncStatus">schedules.xlsx</span>
+          <span class="stat-title" id="syncStatusSub">Data Source</span>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Controls & Filter Bar -->
+  <!-- Main View Area -->
   <main class="main-content">
     <div class="container">
+      
+      <!-- Filter and Search Bar -->
       <div class="filter-wrapper">
         <div class="search-box">
           <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="11" cy="11" r="8"></circle>
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
           </svg>
-          <input type="text" id="searchInput" placeholder="Search by subject, title, or room (e.g. DBMS, Lab 3)..." autocomplete="off">
+          <input type="text" id="searchInput" placeholder="Search by name, subject, or duration..." autocomplete="off">
           <button class="clear-search" id="clearSearch" aria-label="Clear search" style="display: none;">&times;</button>
         </div>
 
-        <div class="view-toggles">
-          <div class="tab-group" id="viewModeGroup">
-            <button class="tab-btn active" data-view="grid" id="gridViewBtn">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="3" width="7" height="7"></rect>
-                <rect x="14" y="3" width="7" height="7"></rect>
-                <rect x="14" y="14" width="7" height="7"></rect>
-                <rect x="3" y="14" width="7" height="7"></rect>
-              </svg>
-              Cards
-            </button>
-            <button class="tab-btn" data-view="timeline" id="timelineViewBtn">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="12" y1="3" x2="12" y2="21"></line>
-                <circle cx="12" cy="7" r="3"></circle>
-                <circle cx="12" cy="17" r="3"></circle>
-              </svg>
-              Timeline
-            </button>
-          </div>
-
-          <div class="sort-select-wrapper">
-            <select id="sortSelect" aria-label="Sort dates">
-              <option value="date-asc">Date: Nearest first</option>
-              <option value="date-desc">Date: Furthest first</option>
-              <option value="title-asc">Title: A to Z</option>
-              <option value="priority">Priority: Urgent first</option>
+        <div class="filter-controls">
+          <div class="select-group">
+            <label for="subjectFilter" class="visually-hidden">Filter by Subject</label>
+            <select id="subjectFilter" aria-label="Filter by Subject">
+              <option value="all">All Subjects</option>
             </select>
           </div>
+
+          <div class="select-group">
+            <label for="sortSelect" class="visually-hidden">Sort order</label>
+            <select id="sortSelect" aria-label="Sort schedules">
+              <option value="sn-asc">Serial Number: 1 &rarr; N</option>
+              <option value="date-asc">Due Date: Nearest first</option>
+              <option value="date-desc">Due Date: Furthest first</option>
+              <option value="name-asc">Name: A &rarr; Z</option>
+              <option value="subject-asc">Subject: A &rarr; Z</option>
+            </select>
+          </div>
+
+          <button class="btn btn-ghost btn-icon-only" id="refreshBtn" title="Reload Excel data">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+            </svg>
+          </button>
         </div>
       </div>
 
-      <!-- Category Filter Pills -->
-      <div class="category-pills" id="categoryPills">
-        <button class="pill-btn active" data-category="all">All Events</button>
-        <button class="pill-btn" data-category="exam">Exams & Tests</button>
-        <button class="pill-btn" data-category="assignment">Assignments</button>
-        <button class="pill-btn" data-category="project">Projects & Reviews</button>
-        <button class="pill-btn" data-category="holiday">Holidays & Breaks</button>
-        <button class="pill-btn" data-category="event">Events & Fests</button>
+      <!-- Local file:// protocol helper banner (visible only if browser CORS blocks local file fetch) -->
+      <div class="file-protocol-banner" id="fileProtocolBanner" style="display: none;">
+        <div class="banner-content">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <div>
+            <strong>Direct file:// protocol detected:</strong>
+            <span>Browsers restrict automatic reading of local disk files via file://. Choose <code>schedules.xlsx</code> from this folder once or open via a local server / GitHub Pages.</span>
+          </div>
+        </div>
+        <label class="btn btn-sm btn-primary file-input-label">
+          <span>Choose schedules.xlsx</span>
+          <input type="file" id="localFileInput" accept=".xlsx,.xls,.csv" style="display: none;">
+        </label>
       </div>
 
-      <!-- Events Container -->
-      <div class="content-display">
-        <!-- Grid View -->
-        <div class="events-grid" id="eventsGrid">
-          <!-- Dynamically populated via JS -->
+      <!-- Schedules Table Container: STRICTLY 5 COLUMNS ONLY -->
+      <div class="table-container-card">
+        <div class="table-header-meta">
+          <div class="table-title-wrap">
+            <h2 class="section-title">Academic Schedule Sheet</h2>
+            <span class="read-only-badge">VIEW ONLY</span>
+          </div>
+          <span class="results-count" id="resultsCount">Showing all entries</span>
         </div>
 
-        <!-- Timeline View (hidden initially) -->
-        <div class="events-timeline" id="eventsTimeline" style="display: none;">
-          <!-- Dynamically populated via JS -->
+        <div class="table-responsive">
+          <table class="schedules-table" id="schedulesTable">
+            <thead>
+              <tr>
+                <th class="col-sn" scope="col">Serial Number</th>
+                <th class="col-name" scope="col">Name</th>
+                <th class="col-subject" scope="col">Subject</th>
+                <th class="col-due" scope="col">Due Date</th>
+                <th class="col-duration" scope="col">Duration</th>
+              </tr>
+            </thead>
+            <tbody id="schedulesTableBody">
+              <!-- Dynamically populated rows from schedules.xlsx -->
+            </tbody>
+          </table>
         </div>
 
         <!-- Empty State -->
         <div class="empty-state" id="emptyState" style="display: none;">
-          <div class="empty-icon">📅</div>
-          <h3>No events match your criteria</h3>
-          <p>Try searching for different keywords or clear the active category filters.</p>
+          <div class="empty-icon">📋</div>
+          <h3>No matching schedule entries</h3>
+          <p>Try searching for different keywords or clear the subject filter.</p>
           <button class="btn btn-secondary" id="resetFiltersBtn">Reset Filters</button>
         </div>
       </div>
-    </div>
-  </main>
 
-  <!-- Modal for Adding / Editing Date -->
-  <div class="modal-overlay" id="eventModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3 id="modalTitle">Add Important Date</h3>
-        <button class="modal-close-btn" id="closeModalBtn" aria-label="Close dialog">&times;</button>
+      <!-- Workflow Guide info pill -->
+      <div class="workflow-hint-card">
+        <div class="hint-icon">💡</div>
+        <div class="hint-text">
+          <strong>How this works:</strong> Update the <code>schedules.xlsx</code> file in your local folder (either offline using Microsoft Excel or via the <a href="editor.html">Excel Update Page</a>), commit and push to Git. The view table updates automatically!
+        </div>
       </div>
 
-      <form id="eventForm" class="modal-body">
-        <input type="hidden" id="eventId">
-
-        <div class="form-group">
-          <label for="eventTitle">Event / Exam Title <span class="required">*</span></label>
-          <input type="text" id="eventTitle" placeholder="e.g. Operating Systems Lab Exam" required>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label for="eventCategory">Category <span class="required">*</span></label>
-            <select id="eventCategory" required>
-              <option value="exam">Exam / Quiz</option>
-              <option value="assignment">Assignment / Homework</option>
-              <option value="project">Project Review / Submission</option>
-              <option value="holiday">Holiday / Vacation</option>
-              <option value="event">Seminar / Hackathon / Fest</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="eventPriority">Priority <span class="required">*</span></label>
-            <select id="eventPriority" required>
-              <option value="high">High (Red)</option>
-              <option value="medium" selected>Medium (Amber)</option>
-              <option value="low">Low (Blue)</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label for="eventDate">Date <span class="required">*</span></label>
-            <input type="date" id="eventDate" required>
-          </div>
-
-          <div class="form-group">
-            <label for="eventTime">Time (optional)</label>
-            <input type="time" id="eventTime">
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label for="eventLocation">Venue / Location / Platform</label>
-          <input type="text" id="eventLocation" placeholder="e.g. Lab 402 / Google Classroom / Audi-1">
-        </div>
-
-        <div class="form-group">
-          <label for="eventDesc">Description & Instructions</label>
-          <textarea id="eventDesc" rows="3" placeholder="Syllabus units, submission links, guidelines or faculty instructions..."></textarea>
-        </div>
-
-        <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" id="cancelModalBtn">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="saveEventBtn">Save Date</button>
-        </div>
-      </form>
     </div>
-  </div>
+  </main>
 
   <!-- Notification Toast -->
   <div class="toast" id="toastNotification" role="alert"></div>
@@ -271,12 +224,12 @@
   <footer class="footer">
     <div class="container footer-content">
       <div class="footer-left">
-        <p><strong>CSE - Section E</strong> &bull; Academic Notice Board &amp; Schedule Portal</p>
-        <p class="text-muted">Designed for fast access to critical dates and semester milestones.</p>
+        <p><strong>CSE - Section E</strong> &bull; Important Dates &amp; Academic Schedules</p>
+        <p class="text-muted">Displaying columns: Serial Number &bull; Name &bull; Subject &bull; Due Date &bull; Duration</p>
       </div>
       <div class="footer-actions">
-        <button class="btn btn-sm btn-ghost" id="restoreDefaultsBtn">Reset to Sample Dates</button>
-        <button class="btn btn-sm btn-ghost" id="exportDatesBtn">Export (.JSON)</button>
+        <a href="editor.html" class="btn btn-sm btn-outline">Schedule Editor</a>
+        <button class="btn btn-sm btn-ghost" id="downloadCurrentXlsxBtn">Download schedules.xlsx</button>
       </div>
     </div>
   </footer>
