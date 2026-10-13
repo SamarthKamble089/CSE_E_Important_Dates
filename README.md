@@ -6,51 +6,59 @@ Official academic schedule and important dates portal for **CSE - Section E**.
 
 1. **View Website (`index.html`)**:
    - Strictly read-only portal.
-   - Displays only 5 columns:
-     - **Serial Number**
+   - Displays 6 columns:
+     - **Serial Number** (`#`)
      - **Name**
      - **Subject**
      - **Due Date**
+     - **Due Time**
      - **Duration**
-   - Automatically synchronizes with [schedules.xlsx](file:///c:/Users/Samarth%20Kamble/Desktop/TimeTAble/CSE_E_Important_Dates/schedules.xlsx) directly in this folder.
-   - Includes real-time IST clock, dynamic countdown badges (e.g. *In 3 days*, *Tomorrow*, *Overdue*), search, subject filters, and sorting.
+   - Automatically synchronizes with [schedules.txt](file:///c:/Users/Samarth%20Kamble/Desktop/TimeTAble/CSE_E_Important_Dates/schedules.txt) directly in this folder.
+   - **Smart Expiration & Ordering**:
+     - Automatically hides schedules that are older than 1 day (>24 hours).
+     - Places schedules that ended recently (within the last 24 hours) at the **bottom** with an overdue tag.
+     - Arranges upcoming schedules in chronological order by **Due Date and Time**.
+   - Includes live IST clock, search, subject filtering, and sorting.
 
-2. **Excel Schedule Editor (`editor.html`)**:
-   - Web interface to manage schedule entries offline.
-   - Add new schedules, edit rows, reorder, auto-renumber serial numbers.
-   - Single-click **"Save & Download schedules.xlsx"** to generate the updated Excel spreadsheet.
-   - Import existing Excel files (`.xlsx`, `.xls`, `.csv`).
+2. **Schedule Text Editor (`editor.html`)**:
+   - Lightweight offline editor to add, edit, re-order, and manage schedules.
+   - One-click **"Save & Download schedules.txt"** to export the updated text file.
+   - Import existing text or CSV files.
+
+---
+
+## 📄 Data Format (`schedules.txt`)
+
+The schedule data is stored in a clean, human-readable text file:
+```text
+# Format: Serial Number | Name | Subject | Due Date | Due Time | Duration
+1 | Math Assignment | Math | 2026-10-18 | 10:00 AM | 2 Hours
+2 | Math Quiz | Math | 2026-10-15 | 11:59 PM | 30 Minutes
+3 | Operating system CIE 1 Quiz | OS | 2026-10-14 | 02:00 PM | 1 Hour
+```
 
 ---
 
 ## 🚀 Offline Git Workflow
 
-To update dates and display them on the live website:
-
-### Option A: Using the Excel Editor Web Page
-1. Open [editor.html](file:///c:/Users/Samarth%20Kamble/Desktop/TimeTAble/CSE_E_Important_Dates/editor.html) in your browser.
-2. Add or update schedule entries using the quick-add bar or edit buttons.
-3. Click **"Save & Download schedules.xlsx"** and save/replace `schedules.xlsx` in this folder.
+### Option A: Edit directly in Notepad
+1. Open [schedules.txt](file:///c:/Users/Samarth%20Kamble/Desktop/TimeTAble/CSE_E_Important_Dates/schedules.txt) in Notepad or any text editor offline.
+2. Edit or add lines using the format: `Serial Number | Name | Subject | Due Date | Due Time | Duration`.
+3. Save the file.
 4. Commit and push to Git:
    ```bash
-   git add schedules.xlsx
-   git commit -m "Update schedule dates"
+   git add schedules.txt
+   git commit -m "Update schedules"
    git push origin main
    ```
-5. Done! The view page [index.html](file:///c:/Users/Samarth%20Kamble/Desktop/TimeTAble/CSE_E_Important_Dates/index.html) immediately displays your new dates.
 
-### Option B: Editing Directly in Microsoft Excel
-1. Open `schedules.xlsx` in Microsoft Excel or LibreOffice Calc.
-2. Update the rows under the headers:
-   - `Serial Number`
-   - `Name`
-   - `Subject`
-   - `Due Date` (YYYY-MM-DD)
-   - `Duration` (e.g., *2 Hours*, *1 Day*)
-3. Save the file.
-4. Push to Git:
+### Option B: Using the Web Editor (`editor.html`)
+1. Open [editor.html](file:///c:/Users/Samarth%20Kamble/Desktop/TimeTAble/CSE_E_Important_Dates/editor.html) in your browser.
+2. Add or update schedule entries using the quick-add bar or edit buttons.
+3. Click **"Save & Download schedules.txt"** and replace `schedules.txt` in this folder.
+4. Commit and push to Git:
    ```bash
-   git add schedules.xlsx
+   git add schedules.txt
    git commit -m "Update schedules"
    git push origin main
    ```

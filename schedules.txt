@@ -1,0 +1,10 @@
+# CSE - Section E Important Dates & Schedules
+# Format: Serial Number | Name | Subject | Due Date | Due Time | Duration
+# Lines starting with # are comments. You can edit this file offline in Notepad or any text editor.
+
+1 | Math Assignment | Math | 2026-10-18 | 10:00 AM | 2 Hours
+2 | Math Quiz | Math | 2026-10-15 | 11:59 PM | 30 Minutes
+3 | Operating system CIE 1 Quiz | OS | 2026-10-14 | 02:00 PM | 1 Hour
+4 | Software Requirements Spec (SRS) Review | Software Engineering | 2026-10-28 | 09:30 AM | 30 Minutes
+5 | Mini Project Phase 1 Code Submission | Cloud & Full Stack Lab | 2026-11-02 | 05:00 PM | 3 Days
+6 | End-Term Practical Lab Exam | Operating Systems | 2026-11-10 | 09:00 AM | 3 Hours

@@ -3,19 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="CSE-E Schedule Manager - Create, edit, and export schedules.xlsx for the academic portal.">
-  <title>CSE - E | Excel Schedule Editor</title>
+  <meta name="description" content="CSE-E Schedule Manager - Create, edit, and export schedules.txt for the academic portal.">
+  <title>CSE - E | Schedule Text Editor</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
-  <!-- SheetJS local offline script with CDN fallback -->
-  <script src="xlsx.full.min.js"></script>
-  <script>
-    if (typeof XLSX === 'undefined') {
-      document.write('<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>');
-    }
-  </script>
 </head>
 <body class="editor-page">
   <!-- Ambient background glow elements -->
@@ -35,20 +28,20 @@
             <line x1="16" y1="17" x2="8" y2="17"></line>
             <polyline points="10 9 9 9 8 9"></polyline>
           </svg>
-          <span>DEPARTMENT OF CSE &bull; SECTION E &bull; ADMIN</span>
+          <span>DEPARTMENT OF CSE &bull; SECTION E &bull; SCHEDULE MANAGER</span>
         </div>
-        <h1 class="portal-title">Excel Schedule Sheet Manager</h1>
-        <p class="portal-subtitle">Update and generate <code>schedules.xlsx</code> to push to Git &bull; Offline Ready</p>
+        <h1 class="portal-title">Schedule Text File Manager</h1>
+        <p class="portal-subtitle">Update and generate <code>schedules.txt</code> to push to Git &bull; Offline Ready</p>
       </div>
 
       <div class="header-right">
-        <button class="btn btn-success" id="downloadXlsxTopBtn">
+        <button class="btn btn-success" id="downloadTxtTopBtn">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
             <polyline points="7 10 12 15 17 10"></polyline>
             <line x1="12" y1="15" x2="12" y2="3"></line>
           </svg>
-          Save &amp; Download schedules.xlsx
+          Save &amp; Download schedules.txt
         </button>
       </div>
     </div>
@@ -71,7 +64,7 @@
             <div class="step-num">1</div>
             <div class="step-content">
               <strong>Edit Schedules</strong>
-              <p>Add, edit or delete rows below in this manager (or edit <code>schedules.xlsx</code> directly in Excel offline).</p>
+              <p>Add, edit or delete rows below in this manager (or edit <code>schedules.txt</code> directly in Notepad offline).</p>
             </div>
           </div>
 
@@ -79,7 +72,7 @@
             <div class="step-num">2</div>
             <div class="step-content">
               <strong>Save / Download</strong>
-              <p>Click <strong>"Save & Download schedules.xlsx"</strong> and place/replace it in this project folder.</p>
+              <p>Click <strong>"Save & Download schedules.txt"</strong> and place/replace it in this project folder.</p>
             </div>
           </div>
 
@@ -87,7 +80,7 @@
             <div class="step-num">3</div>
             <div class="step-content">
               <strong>Git Commit & Push</strong>
-              <p>In terminal: <code>git add schedules.xlsx</code>, <code>git commit -m "Update"</code>, <code>git push</code>.</p>
+              <p>In terminal: <code>git add schedules.txt</code>, <code>git commit -m "Update"</code>, <code>git push</code>.</p>
             </div>
           </div>
 
@@ -95,7 +88,7 @@
             <div class="step-num">4</div>
             <div class="step-content">
               <strong>Live Display</strong>
-              <p>Your viewers immediately see the updated 5 columns live on the published schedule website.</p>
+              <p>Your viewers immediately see the updated 6 columns live on the published schedule website.</p>
             </div>
           </div>
         </div>
@@ -118,14 +111,14 @@
             Add New Schedule
           </button>
 
-          <label class="btn btn-secondary file-upload-label" title="Load an existing Excel or CSV file from your disk">
+          <label class="btn btn-secondary file-upload-label" title="Load an existing text or CSV file from your disk">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
               <polyline points="17 8 12 3 7 8"></polyline>
               <line x1="12" y1="3" x2="12" y2="15"></line>
             </svg>
-            <span>Import / Open Excel File</span>
-            <input type="file" id="importFileInput" accept=".xlsx,.xls,.csv" style="display: none;">
+            <span>Import / Open .txt File</span>
+            <input type="file" id="importFileInput" accept=".txt,.csv" style="display: none;">
           </label>
 
           <button class="btn btn-ghost" id="renumberBtn" title="Automatically renumber Serial Numbers from 1 to N">
@@ -142,13 +135,13 @@
           <button class="btn btn-danger-outline" id="clearAllBtn" title="Clear all schedule items">
             Clear All
           </button>
-          <button class="btn btn-success" id="downloadXlsxBtn">
+          <button class="btn btn-success" id="downloadTxtBtn">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
               <polyline points="7 10 12 15 17 10"></polyline>
               <line x1="12" y1="15" x2="12" y2="3"></line>
             </svg>
-            Save &amp; Download schedules.xlsx
+            Save &amp; Download schedules.txt
           </button>
         </div>
       </div>
@@ -188,7 +181,7 @@
       <div class="table-container-card">
         <div class="table-header-meta">
           <div class="table-title-wrap">
-            <h2 class="section-title">Schedule Rows in schedules.xlsx</h2>
+            <h2 class="section-title">Schedule Rows in schedules.txt</h2>
             <span class="status-badge" id="scheduleCountBadge">0 Rows</span>
           </div>
           <span class="text-muted text-sm">Drag or use arrows to order rows &bull; Changes saved locally</span>
@@ -215,9 +208,9 @@
 
         <!-- Empty State -->
         <div class="empty-state" id="editorEmptyState" style="display: none;">
-          <div class="empty-icon">📊</div>
+          <div class="empty-icon">📝</div>
           <h3>No schedules yet</h3>
-          <p>Click "Add New Schedule" or "Import / Open Excel File" to populate rows.</p>
+          <p>Click "Add New Schedule" or "Import / Open .txt File" to populate rows.</p>
           <button class="btn btn-primary" id="loadDefaultsBtn">Load Sample Schedules</button>
         </div>
       </div>
@@ -235,9 +228,9 @@
           </div>
           <button class="btn btn-xs btn-ghost" id="copyGitCmdBtn">Copy Git Commands</button>
         </div>
-        <p class="git-instructions">After downloading or saving <code>schedules.xlsx</code> into this folder, run these commands in your PowerShell / Command Prompt terminal:</p>
-        <pre class="git-terminal-box"><code>git add schedules.xlsx
-git commit -m "Update schedules.xlsx"
+        <p class="git-instructions">After downloading or saving <code>schedules.txt</code> into this folder, run these commands in your PowerShell / Command Prompt terminal:</p>
+        <pre class="git-terminal-box"><code>git add schedules.txt
+git commit -m "Update schedules.txt"
 git push origin main</code></pre>
       </div>
 
@@ -306,6 +299,8 @@ git push origin main</code></pre>
     <option value="Artificial Intelligence">
     <option value="Theory of Computation">
     <option value="Information Security">
+    <option value="Math">
+    <option value="OS">
   </datalist>
 
   <datalist id="timesList">
@@ -337,11 +332,11 @@ git push origin main</code></pre>
   <footer class="footer">
     <div class="container footer-content">
       <div class="footer-left">
-        <p><strong>CSE - Section E</strong> &bull; Schedule Manager &amp; Excel Generator</p>
+        <p><strong>CSE - Section E</strong> &bull; Schedule Manager &amp; Text Generator</p>
         <p class="text-muted">Strict columns: Serial Number &bull; Name &bull; Subject &bull; Due Date &bull; Due Time &bull; Duration</p>
       </div>
       <div class="footer-actions">
-        <span class="text-muted text-sm">Standalone Excel Editor &bull; Offline Ready</span>
+        <span class="text-muted text-sm">Standalone Text Editor &bull; Offline Ready</span>
       </div>
     </div>
   </footer>

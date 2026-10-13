@@ -1,16 +1,16 @@
 /**
  * CSE - Section E Schedule Manager
- * Logic for updating, importing, and exporting schedules.xlsx
+ * Logic for updating, importing, and exporting schedules.txt
  * Columns: Serial Number, Name, Subject, Due Date, Due Time, Duration
  * Offline Git workflow enabled.
  */
 
-const STORAGE_KEY = 'csee_schedules_cache_v2';
+const STORAGE_KEY = 'csee_schedules_cache_v3';
 
 const INITIAL_SCHEDULES = [
-  { sn: 1, name: 'Mid-Semester Theory Exam', subject: 'Operating Systems', due: '2026-10-18', time: '10:00 AM', duration: '2 Hours' },
-  { sn: 2, name: 'PL/SQL Queries & Lab Submission', subject: 'Database Management Systems', due: '2026-10-22', time: '11:59 PM', duration: '1 Day' },
-  { sn: 3, name: 'Packet Tracer Subnetting Lab Quiz', subject: 'Computer Networks', due: '2026-10-25', time: '02:30 PM', duration: '1 Hour' },
+  { sn: 1, name: 'Math Assignment', subject: 'Math', due: '2026-10-18', time: '10:00 AM', duration: '2 Hours' },
+  { sn: 2, name: 'Math Quiz', subject: 'Math', due: '2026-10-15', time: '11:59 PM', duration: '30 Minutes' },
+  { sn: 3, name: 'Operating system CIE 1 Quiz', subject: 'OS', due: '2026-10-14', time: '02:00 PM', duration: '1 Hour' },
   { sn: 4, name: 'Software Requirements Spec (SRS) Review', subject: 'Software Engineering', due: '2026-10-28', time: '09:30 AM', duration: '30 Minutes' },
   { sn: 5, name: 'Mini Project Phase 1 Code Submission', subject: 'Cloud & Full Stack Lab', due: '2026-11-02', time: '05:00 PM', duration: '3 Days' },
   { sn: 6, name: 'End-Term Practical Lab Exam', subject: 'Operating Systems', due: '2026-11-10', time: '09:00 AM', duration: '3 Hours' }
@@ -47,8 +47,8 @@ const editTime = document.getElementById('editTime');
 const editDuration = document.getElementById('editDuration');
 
 // Action Buttons
-const downloadXlsxBtn = document.getElementById('downloadXlsxBtn');
-const downloadXlsxTopBtn = document.getElementById('downloadXlsxTopBtn');
+const downloadTxtBtn = document.getElementById('downloadTxtBtn');
+const downloadTxtTopBtn = document.getElementById('downloadTxtTopBtn');
 const importFileInput = document.getElementById('importFileInput');
 const renumberBtn = document.getElementById('renumberBtn');
 const clearAllBtn = document.getElementById('clearAllBtn');
@@ -94,14 +94,6 @@ function format12Hour(hours, minutes) {
 // Normalize Time string
 function normalizeTimeString(rawTime) {
   if (!rawTime) return '11:59 PM';
-
-  if (typeof rawTime === 'number') {
-    const totalMinutes = Math.round(rawTime * 24 * 60);
-    const hours = Math.floor(totalMinutes / 60) % 24;
-    const minutes = totalMinutes % 60;
-    return format12Hour(hours, minutes);
-  }
-
   const str = String(rawTime).trim();
   if (!str) return '11:59 PM';
 
@@ -118,6 +110,63 @@ function normalizeTimeString(rawTime) {
   }
 
   return str;
+}
+
+// Parse Plain Text Content
+function parseTxtContent(text) {
+  if (!text) return [];
+
+  const lines = text.split(/\r?\n/);
+  const rows = [];
+
+  for (let rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#') || line.startsWith('//')) {
+      continue;
+    }
+
+    let parts = [];
+    if (line.includes('|')) {
+      parts = line.split('|').map(s => s.trim());
+    } else if (line.includes('\t')) {
+      parts = line.split('\t').map(s => s.trim());
+    } else if (line.includes(',')) {
+      parts = line.split(',').map(s => s.trim());
+    } else {
+      continue;
+    }
+
+    if (/serial|s\.?no|subject|due/i.test(parts[0]) || /name/i.test(parts[1])) {
+      continue;
+    }
+
+    if (parts.length >= 4) {
+      const sn = parseInt(parts[0], 10) || (rows.length + 1);
+      const name = parts[1] || `Schedule Item ${rows.length + 1}`;
+      const subject = parts[2] || 'General';
+      const due = parts[3] || '';
+
+      let time = '11:59 PM';
+      let duration = '1 Day';
+
+      if (parts.length >= 6) {
+        time = normalizeTimeString(parts[4]);
+        duration = parts[5] || '1 Day';
+      } else if (parts.length === 5) {
+        if (/hour|day|min|week/i.test(parts[4])) {
+          duration = parts[4];
+          time = '11:59 PM';
+        } else {
+          time = normalizeTimeString(parts[4]);
+          duration = '1 Day';
+        }
+      }
+
+      rows.push({ sn, name, subject, due, time, duration });
+    }
+  }
+
+  return rows;
 }
 
 // Load Data
@@ -137,12 +186,12 @@ async function loadData() {
     console.warn('LocalStorage error', e);
   }
 
-  // Try fetching schedules.xlsx from folder
+  // Try fetching schedules.txt from folder
   try {
-    const response = await fetch('schedules.xlsx?t=' + Date.now());
+    const response = await fetch('schedules.txt?t=' + Date.now());
     if (response.ok) {
-      const buffer = await response.arrayBuffer();
-      const parsed = parseExcelBuffer(buffer);
+      const text = await response.text();
+      const parsed = parseTxtContent(text);
       if (parsed && parsed.length > 0) {
         schedules = parsed;
         saveData();
@@ -165,44 +214,12 @@ function saveData() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(schedules));
 }
 
-// Parse Excel Buffer
-function parseExcelBuffer(buffer) {
-  if (typeof XLSX === 'undefined') return null;
-
-  const workbook = XLSX.read(buffer, { type: 'array' });
-  const firstSheetName = workbook.SheetNames[0];
-  const worksheet = workbook.Sheets[firstSheetName];
-  const rawRows = XLSX.utils.sheet_to_json(worksheet, { defval: '', raw: false });
-
-  if (!rawRows || rawRows.length === 0) return null;
-
-  return rawRows.map((row, index) => {
-    const keys = Object.keys(row);
-    const snKey = keys.find(k => /serial|s\.?no|sl\.?no|#/i.test(k));
-    const nameKey = keys.find(k => /name|title|event|task/i.test(k));
-    const subjectKey = keys.find(k => /subject|course/i.test(k));
-    const dueKey = keys.find(k => /due\s*date|^date$|deadline/i.test(k));
-    const timeKey = keys.find(k => /(due\s*time|timing|^time$)/i.test(k) && !/duration/i.test(k));
-    const durationKey = keys.find(k => /duration|period|hours/i.test(k));
-
-    return {
-      sn: Number(row[snKey]) || (index + 1),
-      name: String(row[nameKey] || row['Name'] || `Schedule Item ${index + 1}`).trim(),
-      subject: String(row[subjectKey] || row['Subject'] || 'General').trim(),
-      due: String(row[dueKey] || row['Due Date'] || '').trim(),
-      time: normalizeTimeString(row[timeKey] || row['Due Time'] || ''),
-      duration: String(row[durationKey] || row['Duration'] || '1 Day').trim()
-    };
-  });
-}
-
 // Render Table
 function render() {
   if (scheduleCountBadge) {
     scheduleCountBadge.textContent = `${schedules.length} Rows`;
   }
 
-  // Update next quick add serial number
   if (quickSn) {
     const maxSn = schedules.reduce((max, item) => Math.max(max, Number(item.sn) || 0), 0);
     quickSn.value = maxSn + 1;
@@ -345,45 +362,36 @@ function closeModal() {
   editModal.classList.remove('active');
 }
 
-// Export to Excel file schedules.xlsx (6 Columns)
-function exportToExcel() {
-  if (typeof XLSX === 'undefined') {
-    showToast('SheetJS library is loading, please try again.');
-    return;
-  }
-
+// Export to schedules.txt
+function exportToTxt() {
   if (schedules.length === 0) {
     showToast('Add at least one schedule before exporting.');
     return;
   }
 
-  // Format exactly into the 6 columns
-  const exportRows = schedules.map(item => ({
-    'Serial Number': Number(item.sn) || 1,
-    'Name': item.name,
-    'Subject': item.subject,
-    'Due Date': item.due,
-    'Due Time': item.time || '11:59 PM',
-    'Duration': item.duration
-  }));
-
-  const worksheet = XLSX.utils.json_to_sheet(exportRows);
-
-  worksheet['!cols'] = [
-    { wch: 16 }, // Serial Number
-    { wch: 40 }, // Name
-    { wch: 30 }, // Subject
-    { wch: 16 }, // Due Date
-    { wch: 16 }, // Due Time
-    { wch: 18 }  // Duration
+  const lines = [
+    '# CSE - Section E Important Dates & Schedules',
+    '# Format: Serial Number | Name | Subject | Due Date | Due Time | Duration',
+    ''
   ];
 
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Schedules');
-  XLSX.writeFile(workbook, 'schedules.xlsx');
-  saveData();
+  schedules.forEach(item => {
+    lines.push(`${item.sn} | ${item.name} | ${item.subject} | ${item.due} | ${item.time || '11:59 PM'} | ${item.duration}`);
+  });
 
-  showToast('✅ Downloaded schedules.xlsx! Replace it in your project folder.');
+  const content = lines.join('\n');
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'schedules.txt';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  saveData();
+  showToast('✅ Downloaded schedules.txt! Replace it in your project folder.');
 }
 
 // Setup Event Listeners
@@ -444,25 +452,23 @@ function setupEventListeners() {
     });
   }
 
-  // Modal open & close
   if (openAddModalBtn) {
     openAddModalBtn.addEventListener('click', () => openEditModal());
   }
   if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
   if (cancelModalBtn) cancelModalBtn.addEventListener('click', closeModal);
 
-  // Close modal on click outside
   if (editModal) {
     editModal.addEventListener('click', (e) => {
       if (e.target === editModal) closeModal();
     });
   }
 
-  // Download XLSX buttons
-  if (downloadXlsxBtn) downloadXlsxBtn.addEventListener('click', exportToExcel);
-  if (downloadXlsxTopBtn) downloadXlsxTopBtn.addEventListener('click', exportToExcel);
+  // Download schedules.txt
+  if (downloadTxtBtn) downloadTxtBtn.addEventListener('click', exportToTxt);
+  if (downloadTxtTopBtn) downloadTxtTopBtn.addEventListener('click', exportToTxt);
 
-  // Import / Open Excel File
+  // Import Plain Text file
   if (importFileInput) {
     importFileInput.addEventListener('change', (e) => {
       const file = e.target.files[0];
@@ -470,8 +476,8 @@ function setupEventListeners() {
 
       const reader = new FileReader();
       reader.onload = (evt) => {
-        const data = new Uint8Array(evt.target.result);
-        const parsed = parseExcelBuffer(data);
+        const textContent = evt.target.result;
+        const parsed = parseTxtContent(textContent);
         if (parsed && parsed.length > 0) {
           schedules = parsed;
           saveData();
@@ -482,7 +488,7 @@ function setupEventListeners() {
         }
         importFileInput.value = '';
       };
-      reader.readAsArrayBuffer(file);
+      reader.readAsText(file);
     });
   }
 
@@ -523,7 +529,7 @@ function setupEventListeners() {
   // Copy Git Commands
   if (copyGitCmdBtn) {
     copyGitCmdBtn.addEventListener('click', () => {
-      const gitCmds = `git add schedules.xlsx\ngit commit -m "Update schedules.xlsx"\ngit push origin main`;
+      const gitCmds = `git add schedules.txt\ngit commit -m "Update schedules.txt"\ngit push origin main`;
       navigator.clipboard.writeText(gitCmds).then(() => {
         showToast('Copied Git commands to clipboard!');
       }).catch(() => {

@@ -1,7 +1,7 @@
 /**
  * CSE - Section E Academic Schedules Portal
  * View-Only Page: Strictly displays Serial Number, Name, Subject, Due Date, Due Time, Duration.
- * Reads dynamically from schedules.xlsx in the folder.
+ * Reads dynamically from schedules.txt in the folder.
  * 
  * Auto-filtering & Ordering Rules:
  * 1. Compares each entry's due date & time against the current date & time.
@@ -12,15 +12,15 @@
 
 // Fallback initial schedules if fetch is blocked or file not yet loaded
 const FALLBACK_SCHEDULES = [
-  { sn: 1, name: 'Mid-Semester Theory Exam', subject: 'Operating Systems', due: '2026-10-18', time: '10:00 AM', duration: '2 Hours' },
-  { sn: 2, name: 'PL/SQL Queries & Lab Submission', subject: 'Database Management Systems', due: '2026-10-22', time: '11:59 PM', duration: '1 Day' },
-  { sn: 3, name: 'Packet Tracer Subnetting Lab Quiz', subject: 'Computer Networks', due: '2026-10-25', time: '02:30 PM', duration: '1 Hour' },
+  { sn: 1, name: 'Math Assignment', subject: 'Math', due: '2026-10-18', time: '10:00 AM', duration: '2 Hours' },
+  { sn: 2, name: 'Math Quiz', subject: 'Math', due: '2026-10-15', time: '11:59 PM', duration: '30 Minutes' },
+  { sn: 3, name: 'Operating system CIE 1 Quiz', subject: 'OS', due: '2026-10-14', time: '02:00 PM', duration: '1 Hour' },
   { sn: 4, name: 'Software Requirements Spec (SRS) Review', subject: 'Software Engineering', due: '2026-10-28', time: '09:30 AM', duration: '30 Minutes' },
   { sn: 5, name: 'Mini Project Phase 1 Code Submission', subject: 'Cloud & Full Stack Lab', due: '2026-11-02', time: '05:00 PM', duration: '3 Days' },
   { sn: 6, name: 'End-Term Practical Lab Exam', subject: 'Operating Systems', due: '2026-11-10', time: '09:00 AM', duration: '3 Hours' }
 ];
 
-const STORAGE_KEY = 'csee_schedules_cache_v2';
+const STORAGE_KEY = 'csee_schedules_cache_v3';
 
 // State
 let rawSchedules = [];
@@ -28,7 +28,7 @@ let processedSchedules = [];
 let searchQuery = '';
 let selectedSubject = 'all';
 let currentSort = 'datetime-asc';
-let showHiddenPast = false; // Toggle to inspect older items if user clicks badge
+let showHiddenPast = false;
 
 // DOM Elements
 const schedulesTableBody = document.getElementById('schedulesTableBody');
@@ -42,7 +42,7 @@ const resultsCount = document.getElementById('resultsCount');
 const resetFiltersBtn = document.getElementById('resetFiltersBtn');
 const fileProtocolBanner = document.getElementById('fileProtocolBanner');
 const localFileInput = document.getElementById('localFileInput');
-const downloadCurrentXlsxBtn = document.getElementById('downloadCurrentXlsxBtn');
+const downloadCurrentTxtBtn = document.getElementById('downloadCurrentTxtBtn');
 const toastNotification = document.getElementById('toastNotification');
 const hiddenStatusBadge = document.getElementById('hiddenStatusBadge');
 
@@ -94,7 +94,7 @@ function showToast(message) {
   }, 3200);
 }
 
-// Helper: Format 12-hour AM/PM string
+// Format 12-hour AM/PM string
 function format12Hour(hours, minutes) {
   const h = hours % 12 || 12;
   const m = String(minutes).padStart(2, '0');
@@ -104,20 +104,10 @@ function format12Hour(hours, minutes) {
 
 // Normalize Time string
 function normalizeTimeString(rawTime) {
-  if (!rawTime) return '11:59 PM'; // Default end of day if missing
-
-  // Check if Excel stored it as numeric fraction of a day (e.g. 0.4166667 for 10:00 AM)
-  if (typeof rawTime === 'number') {
-    const totalMinutes = Math.round(rawTime * 24 * 60);
-    const hours = Math.floor(totalMinutes / 60) % 24;
-    const minutes = totalMinutes % 60;
-    return format12Hour(hours, minutes);
-  }
-
+  if (!rawTime) return '11:59 PM';
   const str = String(rawTime).trim();
   if (!str) return '11:59 PM';
 
-  // Already 12-hour format e.g. "10:00 AM"
   const match12 = str.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
   if (match12) {
     let h = parseInt(match12[1], 10);
@@ -126,7 +116,6 @@ function normalizeTimeString(rawTime) {
     if (period) {
       return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} ${period}`;
     } else {
-      // 24 hour string "14:30"
       return format12Hour(h, m);
     }
   }
@@ -171,49 +160,70 @@ function getEventDateTime(dateStr, timeStr) {
   return d;
 }
 
-// Parse Excel ArrayBuffer with SheetJS
-function parseExcelBuffer(buffer) {
-  if (typeof XLSX === 'undefined') {
-    console.error('SheetJS library is not available');
-    return null;
+// Parse Plain Text Schedules (schedules.txt)
+// Supports Pipe (|), Tab (\t), or Comma (,) delimiters and # comments
+function parseTxtContent(text) {
+  if (!text) return [];
+
+  const lines = text.split(/\r?\n/);
+  const rows = [];
+
+  for (let rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#') || line.startsWith('//')) {
+      continue;
+    }
+
+    let parts = [];
+    if (line.includes('|')) {
+      parts = line.split('|').map(s => s.trim());
+    } else if (line.includes('\t')) {
+      parts = line.split('\t').map(s => s.trim());
+    } else if (line.includes(',')) {
+      parts = line.split(',').map(s => s.trim());
+    } else {
+      continue;
+    }
+
+    // Skip header line
+    if (/serial|s\.?no|subject|due/i.test(parts[0]) || /name/i.test(parts[1])) {
+      continue;
+    }
+
+    if (parts.length >= 4) {
+      const sn = parseInt(parts[0], 10) || (rows.length + 1);
+      const name = parts[1] || `Schedule Item ${rows.length + 1}`;
+      const subject = parts[2] || 'General';
+      const due = normalizeDateString(parts[3] || '');
+
+      let time = '11:59 PM';
+      let duration = '1 Day';
+
+      if (parts.length >= 6) {
+        time = normalizeTimeString(parts[4]);
+        duration = parts[5] || '1 Day';
+      } else if (parts.length === 5) {
+        if (/hour|day|min|week/i.test(parts[4])) {
+          duration = parts[4];
+          time = '11:59 PM';
+        } else {
+          time = normalizeTimeString(parts[4]);
+          duration = '1 Day';
+        }
+      }
+
+      rows.push({ sn, name, subject, due, time, duration });
+    }
   }
 
-  const workbook = XLSX.read(buffer, { type: 'array' });
-  const firstSheetName = workbook.SheetNames[0];
-  const worksheet = workbook.Sheets[firstSheetName];
-  
-  const rawRows = XLSX.utils.sheet_to_json(worksheet, { defval: '', raw: false });
-  if (!rawRows || rawRows.length === 0) return null;
-
-  return rawRows.map((row, index) => {
-    const keys = Object.keys(row);
-
-    const snKey = keys.find(k => /serial|s\.?no|sl\.?no|#/i.test(k));
-    const nameKey = keys.find(k => /name|title|event|task|exam/i.test(k));
-    const subjectKey = keys.find(k => /subject|course|sub/i.test(k));
-    const dueKey = keys.find(k => /due\s*date|date|deadline/i.test(k));
-    const timeKey = keys.find(k => /(due\s*time|timing|^time$)/i.test(k) && !/duration/i.test(k));
-    const durationKey = keys.find(k => /duration|period|hours/i.test(k));
-
-    const dateVal = normalizeDateString(String(row[dueKey] || row['Due Date'] || '').trim());
-    const timeVal = normalizeTimeString(row[timeKey] || row['Due Time'] || '');
-
-    return {
-      sn: Number(row[snKey]) || (index + 1),
-      name: String(row[nameKey] || row['Name'] || `Schedule Item ${index + 1}`).trim(),
-      subject: String(row[subjectKey] || row['Subject'] || 'General').trim(),
-      due: dateVal,
-      time: timeVal,
-      duration: String(row[durationKey] || row['Duration'] || '1 Day').trim()
-    };
-  });
+  return rows;
 }
 
-// Load Schedules from Excel / Storage / Fallback
+// Load Schedules from schedules.txt / Storage / Fallback
 async function loadSchedulesData() {
   const isFileProtocol = window.location.protocol === 'file:';
 
-  // 1. Check if cached from editor in localStorage
+  // 1. Check if cached in localStorage
   let cachedData = null;
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -224,19 +234,19 @@ async function loadSchedulesData() {
     console.warn('Could not read cached schedules', e);
   }
 
-  // 2. Try fetching schedules.xlsx from folder
+  // 2. Fetch schedules.txt from repository folder
   try {
-    const response = await fetch('schedules.xlsx?t=' + Date.now());
+    const response = await fetch('schedules.txt?t=' + Date.now());
     if (!response.ok) {
       throw new Error(`HTTP error ${response.status}`);
     }
-    const arrayBuffer = await response.arrayBuffer();
-    const parsed = parseExcelBuffer(arrayBuffer);
+    const textData = await response.text();
+    const parsed = parseTxtContent(textData);
     if (parsed && parsed.length > 0) {
       rawSchedules = parsed;
-      syncStatus.textContent = 'schedules.xlsx';
+      syncStatus.textContent = 'schedules.txt';
       syncStatusSub.textContent = 'Synced Live via Git';
-      showToast('Loaded latest schedules with Due Time from Excel');
+      showToast('Loaded latest schedules from schedules.txt');
       processAndRender();
       return;
     }
@@ -246,7 +256,7 @@ async function loadSchedulesData() {
     if (isFileProtocol && fileProtocolBanner) {
       fileProtocolBanner.style.display = 'flex';
       syncStatus.textContent = 'Local file://';
-      syncStatusSub.textContent = 'Select file above to sync';
+      syncStatusSub.textContent = 'Select schedules.txt above';
     } else {
       syncStatus.textContent = 'Local Cache';
       syncStatusSub.textContent = 'From offline editor';
@@ -284,13 +294,11 @@ function formatDisplayDate(dateStr, timeStr) {
   const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 
   let countdown = { text: '', cls: 'normal' };
-  let status = 'upcoming'; // 'upcoming' | 'recently-over' | 'expired'
+  let status = 'upcoming';
 
   if (diffMs < 0) {
-    // Past due
     const hoursAgo = Math.abs(diffHours);
     if (hoursAgo <= 24) {
-      // Within 1 day gap
       status = 'recently-over';
       const roundedHours = Math.round(hoursAgo);
       countdown = { 
@@ -298,13 +306,11 @@ function formatDisplayDate(dateStr, timeStr) {
         cls: 'recently-over' 
       };
     } else {
-      // Older than 1 day
       status = 'expired';
       const daysAgo = Math.floor(hoursAgo / 24);
       countdown = { text: `${daysAgo}d ago`, cls: 'overdue' };
     }
   } else {
-    // Upcoming
     if (diffHours <= 3) {
       countdown = { text: `In ${Math.max(1, Math.round(diffHours))}h!`, cls: 'urgent' };
     } else if (diffDays <= 0 || (diffHours <= 18 && target.getDate() === now.getDate())) {
@@ -363,7 +369,6 @@ function updateStats() {
   const now = new Date();
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-  // Active or recently passed within 1 day
   const validItems = rawSchedules.filter(item => {
     const dt = getEventDateTime(item.due, item.time);
     return dt && dt >= oneDayAgo;
@@ -374,7 +379,6 @@ function updateStats() {
   const subjects = new Set(validItems.map(item => item.subject).filter(Boolean));
   if (statSubjectsCount) statSubjectsCount.textContent = subjects.size;
 
-  // Nearest upcoming due date
   const upcomingItems = validItems
     .map(item => ({ ...item, dt: getEventDateTime(item.due, item.time) }))
     .filter(item => item.dt && item.dt >= now)
@@ -394,16 +398,13 @@ function updateStats() {
 // Apply Filters, Automatic Expiration, and Smart Ordering
 function applyFiltersAndRender() {
   const now = new Date();
-  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000); // 24 hours ago threshold
+  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-  // 1. Filter by search query and subject
   const searchFiltered = rawSchedules.filter(item => {
-    // Subject filter
     if (selectedSubject !== 'all' && item.subject !== selectedSubject) {
       return false;
     }
 
-    // Search query filter
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       const matchName = item.name && item.name.toLowerCase().includes(q);
@@ -417,7 +418,6 @@ function applyFiltersAndRender() {
     return true;
   });
 
-  // 2. Separate into Active, Recently Over (within 1 day), and Expired (> 1 day older)
   const upcomingList = [];
   const recentlyOverList = [];
   const olderThanOneDayList = [];
@@ -432,23 +432,19 @@ function applyFiltersAndRender() {
     }
 
     if (dt >= now) {
-      // Active upcoming
       upcomingList.push(enriched);
     } else if (dt >= oneDayAgo) {
-      // Overdue but within the 1-day grace gap -> will be listed at the end!
       recentlyOverList.push(enriched);
     } else {
-      // Older than 1 day -> HIDE!
       olderThanOneDayList.push(enriched);
     }
   });
 
-  // Update hidden items badge in UI
   if (hiddenStatusBadge) {
     if (olderThanOneDayList.length > 0) {
       hiddenStatusBadge.style.display = 'inline-flex';
       hiddenStatusBadge.innerHTML = showHiddenPast 
-        ? `<span>Showing ${olderThanOneDayList.length} past items (>1d old)</span> &times;`
+        ? `<span>Showing ${olderThanOneDayList.length} past items (&gt;1d old)</span> &times;`
         : `<span>${olderThanOneDayList.length} past items hidden (&gt;1d old)</span>`;
       hiddenStatusBadge.title = showHiddenPast ? 'Click to re-hide past items' : 'Click to inspect hidden items';
     } else {
@@ -456,7 +452,6 @@ function applyFiltersAndRender() {
     }
   }
 
-  // 3. Sort upcoming events according to currentSort
   upcomingList.sort((a, b) => {
     switch (currentSort) {
       case 'datetime-asc':
@@ -474,13 +469,10 @@ function applyFiltersAndRender() {
     }
   });
 
-  // Recently over items: sort chronologically
   recentlyOverList.sort((a, b) => (a.dt ? a.dt.getTime() : 0) - (b.dt ? b.dt.getTime() : 0));
 
-  // 4. Combine: Upcoming items FIRST, Recently Over items AT THE END!
   let finalList = [...upcomingList, ...recentlyOverList];
 
-  // If user explicitly toggled to show older items
   if (showHiddenPast && olderThanOneDayList.length > 0) {
     olderThanOneDayList.sort((a, b) => (b.dt ? b.dt.getTime() : 0) - (a.dt ? a.dt.getTime() : 0));
     finalList = [...finalList, ...olderThanOneDayList];
@@ -490,7 +482,7 @@ function applyFiltersAndRender() {
   renderTable(recentlyOverList.length, olderThanOneDayList.length);
 }
 
-// Render Table: 6 COLUMNS (Serial Number, Name, Subject, Due Date, Due Time, Duration)
+// Render Table: 6 COLUMNS
 function renderTable(recentlyOverCount = 0, hiddenCount = 0) {
   if (!schedulesTableBody) return;
 
@@ -522,12 +514,10 @@ function renderTable(recentlyOverCount = 0, hiddenCount = 0) {
 
     return `
       <tr class="${rowClass}">
-        <!-- Column 1: Serial Number -->
         <td class="col-sn">
           <span class="sn-pill">${escapeHtml(item.sn)}</span>
         </td>
 
-        <!-- Column 2: Name -->
         <td class="col-name">
           <div class="cell-name-wrap">
             <span class="name-icon-bullet ${isRecentlyOver ? 'bullet-overdue' : ''}"></span>
@@ -539,7 +529,6 @@ function renderTable(recentlyOverCount = 0, hiddenCount = 0) {
           </div>
         </td>
 
-        <!-- Column 3: Subject -->
         <td class="col-subject">
           <span class="subject-pill">
             <span class="subject-dot"></span>
@@ -547,7 +536,6 @@ function renderTable(recentlyOverCount = 0, hiddenCount = 0) {
           </span>
         </td>
 
-        <!-- Column 4: Due Date -->
         <td class="col-due">
           <div class="due-date-cell">
             <span class="due-date-main">${dateInfo.formatted}</span>
@@ -555,7 +543,6 @@ function renderTable(recentlyOverCount = 0, hiddenCount = 0) {
           </div>
         </td>
 
-        <!-- Column 5: Due Time -->
         <td class="col-time">
           <span class="due-time-badge ${isRecentlyOver ? 'time-passed' : ''}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -566,7 +553,6 @@ function renderTable(recentlyOverCount = 0, hiddenCount = 0) {
           </span>
         </td>
 
-        <!-- Column 6: Duration -->
         <td class="col-duration">
           <span class="duration-chip">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -587,7 +573,6 @@ function renderTable(recentlyOverCount = 0, hiddenCount = 0) {
 
 // Event Listeners
 function setupEventListeners() {
-  // Search input
   if (searchInput) {
     searchInput.addEventListener('input', (e) => {
       searchQuery = e.target.value.trim();
@@ -598,7 +583,6 @@ function setupEventListeners() {
     });
   }
 
-  // Clear search
   if (clearSearchBtn) {
     clearSearchBtn.addEventListener('click', () => {
       searchInput.value = '';
@@ -609,7 +593,6 @@ function setupEventListeners() {
     });
   }
 
-  // Subject filter
   if (subjectFilter) {
     subjectFilter.addEventListener('change', (e) => {
       selectedSubject = e.target.value;
@@ -617,7 +600,6 @@ function setupEventListeners() {
     });
   }
 
-  // Sort selector
   if (sortSelect) {
     sortSelect.addEventListener('change', (e) => {
       currentSort = e.target.value;
@@ -625,15 +607,13 @@ function setupEventListeners() {
     });
   }
 
-  // Refresh Button
   if (refreshBtn) {
     refreshBtn.addEventListener('click', () => {
-      showToast('Checking for latest schedules.xlsx...');
+      showToast('Checking for latest schedules.txt...');
       loadSchedulesData();
     });
   }
 
-  // Reset Filters
   if (resetFiltersBtn) {
     resetFiltersBtn.addEventListener('click', () => {
       searchQuery = '';
@@ -648,7 +628,6 @@ function setupEventListeners() {
     });
   }
 
-  // Hidden badge toggle
   if (hiddenStatusBadge) {
     hiddenStatusBadge.addEventListener('click', () => {
       showHiddenPast = !showHiddenPast;
@@ -657,7 +636,7 @@ function setupEventListeners() {
     });
   }
 
-  // File Protocol Upload input
+  // Local File Upload (.txt or .csv)
   if (localFileInput) {
     localFileInput.addEventListener('change', (e) => {
       const file = e.target.files[0];
@@ -665,59 +644,51 @@ function setupEventListeners() {
 
       const reader = new FileReader();
       reader.onload = (evt) => {
-        const data = new Uint8Array(evt.target.result);
-        const parsed = parseExcelBuffer(data);
+        const textContent = evt.target.result;
+        const parsed = parseTxtContent(textContent);
         if (parsed && parsed.length > 0) {
           rawSchedules = parsed;
           localStorage.setItem(STORAGE_KEY, JSON.stringify(rawSchedules));
           syncStatus.textContent = file.name;
-          syncStatusSub.textContent = 'Manually loaded file';
+          syncStatusSub.textContent = 'Manually loaded text file';
           showToast(`Successfully loaded ${parsed.length} schedules from ${file.name}`);
           processAndRender();
         } else {
           showToast('Could not find schedule rows in that file.');
         }
       };
-      reader.readAsArrayBuffer(file);
+      reader.readAsText(file);
     });
   }
 
-  // Download Current schedules.xlsx
-  if (downloadCurrentXlsxBtn) {
-    downloadCurrentXlsxBtn.addEventListener('click', () => {
-      exportCurrentSchedulesToExcel();
+  // Download Current schedules.txt
+  if (downloadCurrentTxtBtn) {
+    downloadCurrentTxtBtn.addEventListener('click', () => {
+      exportCurrentSchedulesToTxt();
     });
   }
 }
 
-// Export Current Schedules to Excel (6 columns)
-function exportCurrentSchedulesToExcel() {
-  if (typeof XLSX === 'undefined') {
-    showToast('XLSX library not loaded');
-    return;
-  }
-
-  const exportData = rawSchedules.map(item => ({
-    'Serial Number': item.sn,
-    'Name': item.name,
-    'Subject': item.subject,
-    'Due Date': item.due,
-    'Due Time': item.time || '11:59 PM',
-    'Duration': item.duration
-  }));
-
-  const worksheet = XLSX.utils.json_to_sheet(exportData);
-  worksheet['!cols'] = [
-    { wch: 15 }, // Serial Number
-    { wch: 38 }, // Name
-    { wch: 30 }, // Subject
-    { wch: 16 }, // Due Date
-    { wch: 16 }, // Due Time
-    { wch: 16 }  // Duration
+// Export Current Schedules to Plain Text (schedules.txt)
+function exportCurrentSchedulesToTxt() {
+  const lines = [
+    '# CSE - Section E Important Dates & Schedules',
+    '# Format: Serial Number | Name | Subject | Due Date | Due Time | Duration',
+    ''
   ];
 
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Schedules');
-  XLSX.writeFile(workbook, 'schedules.xlsx');
-  showToast('Downloaded schedules.xlsx');
+  rawSchedules.forEach(item => {
+    lines.push(`${item.sn} | ${item.name} | ${item.subject} | ${item.due} | ${item.time || '11:59 PM'} | ${item.duration}`);
+  });
+
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'schedules.txt';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Downloaded schedules.txt');
 }
