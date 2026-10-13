@@ -11,6 +11,11 @@
   <link rel="stylesheet" href="style.css">
   <!-- SheetJS local offline script with CDN fallback -->
   <script src="xlsx.full.min.js"></script>
+  <script>
+    if (typeof XLSX === 'undefined') {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>');
+    }
+  </script>
 </head>
 <body class="view-page">
   <!-- Ambient background glow elements -->
@@ -38,13 +43,6 @@
           <div class="clock-time" id="liveClock">--:--:--</div>
           <div class="clock-date" id="liveDate">Loading...</div>
         </div>
-        <a href="editor.html" class="btn btn-secondary nav-action-btn" id="manageDatesBtn" title="Open the Excel update page">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-          </svg>
-          <span>Update Excel Sheet</span>
-        </a>
       </div>
     </div>
   </header>
@@ -210,7 +208,7 @@
       <div class="workflow-hint-card">
         <div class="hint-icon">💡</div>
         <div class="hint-text">
-          <strong>How this works:</strong> Update the <code>schedules.xlsx</code> file in your local folder (either offline using Microsoft Excel or via the <a href="editor.html">Excel Update Page</a>), commit and push to Git. The view table updates automatically!
+          <strong>Notice:</strong> This schedule is synced with <code>schedules.xlsx</code> in the repository. It updates automatically when new changes are published via Git.
         </div>
       </div>
 
@@ -228,7 +226,6 @@
         <p class="text-muted">Displaying columns: Serial Number &bull; Name &bull; Subject &bull; Due Date &bull; Duration</p>
       </div>
       <div class="footer-actions">
-        <a href="editor.html" class="btn btn-sm btn-outline">Schedule Editor</a>
         <button class="btn btn-sm btn-ghost" id="downloadCurrentXlsxBtn">Download schedules.xlsx</button>
       </div>
     </div>

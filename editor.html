@@ -9,8 +9,13 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
-  <!-- SheetJS local offline script -->
+  <!-- SheetJS local offline script with CDN fallback -->
   <script src="xlsx.full.min.js"></script>
+  <script>
+    if (typeof XLSX === 'undefined') {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>');
+    }
+  </script>
 </head>
 <body class="editor-page">
   <!-- Ambient background glow elements -->
@@ -37,20 +42,13 @@
       </div>
 
       <div class="header-right">
-        <a href="index.html" class="btn btn-secondary nav-action-btn">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="19" y1="12" x2="5" y2="12"></line>
-            <polyline points="12 19 5 12 12 5"></polyline>
-          </svg>
-          <span>&larr; View Website</span>
-        </a>
         <button class="btn btn-success" id="downloadXlsxTopBtn">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
             <polyline points="7 10 12 15 17 10"></polyline>
             <line x1="12" y1="15" x2="12" y2="3"></line>
           </svg>
-          Save & Download schedules.xlsx
+          Save &amp; Download schedules.xlsx
         </button>
       </div>
     </div>
@@ -97,7 +95,7 @@
             <div class="step-num">4</div>
             <div class="step-content">
               <strong>Live Display</strong>
-              <p>Your viewers immediately see the updated 5 columns live on <a href="index.html">index.html</a>!</p>
+              <p>Your viewers immediately see the updated 5 columns live on the published schedule website.</p>
             </div>
           </div>
         </div>
@@ -324,7 +322,7 @@ git push origin main</code></pre>
         <p class="text-muted">Strict columns: Serial Number &bull; Name &bull; Subject &bull; Due Date &bull; Duration</p>
       </div>
       <div class="footer-actions">
-        <a href="index.html" class="btn btn-sm btn-ghost">&larr; Return to View Portal</a>
+        <span class="text-muted text-sm">Standalone Excel Editor &bull; Offline Ready</span>
       </div>
     </div>
   </footer>
