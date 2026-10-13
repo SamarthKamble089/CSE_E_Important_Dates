@@ -157,7 +157,7 @@
       <div class="quick-add-card">
         <div class="quick-add-header">
           <h4>⚡ Quick Add Schedule</h4>
-          <span class="text-muted">Columns: Serial Number, Name, Subject, Due Date, Duration</span>
+          <span class="text-muted">Columns: Serial Number, Name, Subject, Due Date, Due Time, Duration</span>
         </div>
         <form id="quickAddForm" class="quick-add-form">
           <div class="input-cell cell-sn">
@@ -171,6 +171,9 @@
           </div>
           <div class="input-cell cell-due">
             <input type="date" id="quickDue" required>
+          </div>
+          <div class="input-cell cell-time">
+            <input type="text" id="quickTime" placeholder="Time (e.g., 10:00 AM)" list="timesList" required>
           </div>
           <div class="input-cell cell-duration">
             <input type="text" id="quickDuration" placeholder="Duration (e.g., 2 Hours)" list="durationsList" required>
@@ -199,6 +202,7 @@
                 <th class="col-name" scope="col">Name</th>
                 <th class="col-subject" scope="col">Subject</th>
                 <th class="col-due" scope="col">Due Date</th>
+                <th class="col-time" scope="col">Due Time</th>
                 <th class="col-duration" scope="col">Duration</th>
                 <th class="col-actions" scope="col">Actions</th>
               </tr>
@@ -274,6 +278,11 @@ git push origin main</code></pre>
           </div>
 
           <div class="form-group">
+            <label for="editTime">Due Time <span class="required">*</span></label>
+            <input type="text" id="editTime" list="timesList" placeholder="e.g. 10:00 AM / 23:59" required>
+          </div>
+
+          <div class="form-group">
             <label for="editDuration">Duration <span class="required">*</span></label>
             <input type="text" id="editDuration" list="durationsList" placeholder="e.g. 2 Hours / 1 Day" required>
           </div>
@@ -299,6 +308,16 @@ git push origin main</code></pre>
     <option value="Information Security">
   </datalist>
 
+  <datalist id="timesList">
+    <option value="09:00 AM">
+    <option value="10:00 AM">
+    <option value="11:30 AM">
+    <option value="02:00 PM">
+    <option value="04:30 PM">
+    <option value="06:00 PM">
+    <option value="11:59 PM">
+  </datalist>
+
   <datalist id="durationsList">
     <option value="1 Hour">
     <option value="2 Hours">
@@ -319,7 +338,7 @@ git push origin main</code></pre>
     <div class="container footer-content">
       <div class="footer-left">
         <p><strong>CSE - Section E</strong> &bull; Schedule Manager &amp; Excel Generator</p>
-        <p class="text-muted">Strict columns: Serial Number &bull; Name &bull; Subject &bull; Due Date &bull; Duration</p>
+        <p class="text-muted">Strict columns: Serial Number &bull; Name &bull; Subject &bull; Due Date &bull; Due Time &bull; Duration</p>
       </div>
       <div class="footer-actions">
         <span class="text-muted text-sm">Standalone Excel Editor &bull; Offline Ready</span>

@@ -709,33 +709,119 @@ body {
 
 /* Specific Column Widths */
 .col-sn {
-  width: 120px;
+  width: 90px;
   text-align: center;
 }
 
 .col-name {
-  width: 32%;
-  min-width: 220px;
+  width: 27%;
+  min-width: 200px;
 }
 
 .col-subject {
-  width: 24%;
-  min-width: 180px;
+  width: 21%;
+  min-width: 160px;
 }
 
 .col-due {
-  width: 18%;
-  min-width: 150px;
+  width: 16%;
+  min-width: 135px;
+}
+
+.col-time {
+  width: 14%;
+  min-width: 125px;
 }
 
 .col-duration {
-  width: 16%;
-  min-width: 130px;
+  width: 12%;
+  min-width: 110px;
 }
 
 .col-actions {
   width: 140px;
   text-align: center;
+}
+
+/* Due Time Badge */
+.due-time-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.28rem 0.65rem;
+  border-radius: var(--radius-sm);
+  background: rgba(6, 182, 212, 0.1);
+  border: 1px solid rgba(6, 182, 212, 0.25);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--cyan);
+  white-space: nowrap;
+}
+
+.due-time-badge svg {
+  width: 13px;
+  height: 13px;
+}
+
+.due-time-badge.time-passed {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #fbbf24;
+}
+
+/* Row states: Recently Passed (Within 1 Day Gap, placed at end) & Expired */
+.row-recently-passed {
+  background: rgba(245, 158, 11, 0.04) !important;
+  border-left: 3px solid var(--amber) !important;
+}
+
+.row-recently-passed:hover {
+  background: rgba(245, 158, 11, 0.08) !important;
+}
+
+.row-expired {
+  opacity: 0.6;
+  background: rgba(100, 116, 139, 0.05) !important;
+}
+
+.bullet-overdue {
+  background: var(--amber) !important;
+  box-shadow: 0 0 8px var(--amber-glow) !important;
+}
+
+.overdue-inline-tag {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #fbbf24;
+  margin-top: 0.15rem;
+}
+
+.expired-inline-tag {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-dim);
+  margin-top: 0.15rem;
+}
+
+.hidden-pill {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.hidden-pill:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-main);
 }
 
 /* Table Body Rows */
@@ -1073,7 +1159,7 @@ body {
 
 .quick-add-form {
   display: grid;
-  grid-template-columns: 80px 2fr 1.6fr 1.4fr 1.2fr auto;
+  grid-template-columns: 75px 2fr 1.5fr 1.3fr 1.2fr 1.1fr auto;
   gap: 0.75rem;
   align-items: center;
 }

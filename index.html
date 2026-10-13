@@ -133,9 +133,9 @@
           <div class="select-group">
             <label for="sortSelect" class="visually-hidden">Sort order</label>
             <select id="sortSelect" aria-label="Sort schedules">
+              <option value="datetime-asc" selected>Due Date &amp; Time (Nearest first)</option>
+              <option value="datetime-desc">Due Date &amp; Time (Furthest first)</option>
               <option value="sn-asc">Serial Number: 1 &rarr; N</option>
-              <option value="date-asc">Due Date: Nearest first</option>
-              <option value="date-desc">Due Date: Furthest first</option>
               <option value="name-asc">Name: A &rarr; Z</option>
               <option value="subject-asc">Subject: A &rarr; Z</option>
             </select>
@@ -168,14 +168,15 @@
         </label>
       </div>
 
-      <!-- Schedules Table Container: STRICTLY 5 COLUMNS ONLY -->
+      <!-- Schedules Table Container -->
       <div class="table-container-card">
         <div class="table-header-meta">
           <div class="table-title-wrap">
             <h2 class="section-title">Academic Schedule Sheet</h2>
             <span class="read-only-badge">VIEW ONLY</span>
+            <span class="hidden-pill" id="hiddenStatusBadge" style="display: none;"></span>
           </div>
-          <span class="results-count" id="resultsCount">Showing all entries</span>
+          <span class="results-count" id="resultsCount">Showing active entries</span>
         </div>
 
         <div class="table-responsive">
@@ -186,6 +187,7 @@
                 <th class="col-name" scope="col">Name</th>
                 <th class="col-subject" scope="col">Subject</th>
                 <th class="col-due" scope="col">Due Date</th>
+                <th class="col-time" scope="col">Due Time</th>
                 <th class="col-duration" scope="col">Duration</th>
               </tr>
             </thead>
@@ -223,7 +225,7 @@
     <div class="container footer-content">
       <div class="footer-left">
         <p><strong>CSE - Section E</strong> &bull; Important Dates &amp; Academic Schedules</p>
-        <p class="text-muted">Displaying columns: Serial Number &bull; Name &bull; Subject &bull; Due Date &bull; Duration</p>
+        <p class="text-muted">Displaying columns: Serial Number &bull; Name &bull; Subject &bull; Due Date &bull; Due Time &bull; Duration</p>
       </div>
       <div class="footer-actions">
         <button class="btn btn-sm btn-ghost" id="downloadCurrentXlsxBtn">Download schedules.xlsx</button>
