@@ -1527,3 +1527,67 @@ body {
     align-items: flex-start;
   }
 }
+
+/* ==========================================================================
+   Connection & Direct Sync Banner
+   ========================================================================== */
+.connection-banner-section {
+  padding: 0 0 1rem 0;
+  position: relative;
+  z-index: 10;
+}
+
+.connection-status-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 0.85rem 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  transition: border-color var(--transition-fast);
+}
+
+.connection-status-card.connected {
+  border-color: rgba(16, 185, 129, 0.4);
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.connection-status-card.disconnected {
+  border-color: rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.05);
+}
+
+.status-indicator-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--amber);
+  display: inline-block;
+}
+
+.status-dot.online {
+  background: var(--emerald);
+  box-shadow: 0 0 10px var(--emerald-glow);
+}
+
+.status-dot.offline {
+  background: var(--amber);
+  box-shadow: 0 0 10px var(--amber-glow);
+}
+
+.status-text {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+

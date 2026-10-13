@@ -1,23 +1,14 @@
 /**
  * CSE - Section E Schedule Manager
  * Logic for updating, importing, and exporting schedules.txt
- * Columns: Serial Number, Name, Subject, Due Date, Due Time, Duration
- * Offline Git workflow enabled.
+ * Directly saves to disk when running with start_editor.bat!
  */
 
 const STORAGE_KEY = 'csee_schedules_cache_v3';
 
-const INITIAL_SCHEDULES = [
-  { sn: 1, name: 'Math Assignment', subject: 'Math', due: '2026-10-18', time: '10:00 AM', duration: '2 Hours' },
-  { sn: 2, name: 'Math Quiz', subject: 'Math', due: '2026-10-15', time: '11:59 PM', duration: '30 Minutes' },
-  { sn: 3, name: 'Operating system CIE 1 Quiz', subject: 'OS', due: '2026-10-14', time: '02:00 PM', duration: '1 Hour' },
-  { sn: 4, name: 'Software Requirements Spec (SRS) Review', subject: 'Software Engineering', due: '2026-10-28', time: '09:30 AM', duration: '30 Minutes' },
-  { sn: 5, name: 'Mini Project Phase 1 Code Submission', subject: 'Cloud & Full Stack Lab', due: '2026-11-02', time: '05:00 PM', duration: '3 Days' },
-  { sn: 6, name: 'End-Term Practical Lab Exam', subject: 'Operating Systems', due: '2026-11-10', time: '09:00 AM', duration: '3 Hours' }
-];
-
 // State
 let schedules = [];
+let isServerConnected = false;
 
 // DOM Elements
 const editorTableBody = document.getElementById('editorTableBody');
@@ -30,6 +21,12 @@ const quickSubject = document.getElementById('quickSubject');
 const quickDue = document.getElementById('quickDue');
 const quickTime = document.getElementById('quickTime');
 const quickDuration = document.getElementById('quickDuration');
+
+// Status & Action Banner Elements
+const connectionCard = document.getElementById('connectionCard');
+const statusDot = document.getElementById('statusDot');
+const statusText = document.getElementById('statusText');
+const gitPushBtn = document.getElementById('gitPushBtn');
 
 // Modal Elements
 const editModal = document.getElementById('editModal');
@@ -60,6 +57,7 @@ const toastNotification = document.getElementById('toastNotification');
 document.addEventListener('DOMContentLoaded', () => {
   setupEventListeners();
   loadData();
+  checkConnection();
 });
 
 // Toast Helper
@@ -69,7 +67,7 @@ function showToast(message) {
   toastNotification.classList.add('show');
   setTimeout(() => {
     toastNotification.classList.remove('show');
-  }, 3200);
+  }, 3500);
 }
 
 // Escape HTML
@@ -169,9 +167,82 @@ function parseTxtContent(text) {
   return rows;
 }
 
-// Load Data
+// Generate Plain Text formatted string
+function generateTxtContent() {
+  const lines = [
+    '# CSE - Section E Important Dates & Schedules',
+    '# Format: Serial Number | Name | Subject | Due Date | Due Time | Duration',
+    '# Lines starting with # are comments. You can edit this file offline in Notepad or any text editor.',
+    ''
+  ];
+
+  schedules.forEach(item => {
+    lines.push(`${item.sn} | ${item.name} | ${item.subject} | ${item.due} | ${item.time || '11:59 PM'} | ${item.duration}`);
+  });
+
+  return lines.join('\n') + '\n';
+}
+
+// Check Connection to local server (app.py)
+async function checkConnection() {
+  const isFileProto = window.location.protocol === 'file:';
+
+  if (isFileProto) {
+    isServerConnected = false;
+    updateStatusUI(false, '⚠️ Running via file://. Browser blocks direct disk editing. Double-click start_editor.bat to auto-save directly to schedules.txt!');
+    return;
+  }
+
+  try {
+    const res = await fetch('/schedules.txt?ping=' + Date.now());
+    if (res.ok) {
+      isServerConnected = true;
+      updateStatusUI(true, '🟢 Connected to local file server: All edits save DIRECTLY to schedules.txt on your disk!');
+      return;
+    }
+  } catch (e) {
+    // not running server
+  }
+
+  isServerConnected = false;
+  updateStatusUI(false, '⚠️ Standalone mode: To enable 1-click direct saves to schedules.txt, double-click start_editor.bat in the project folder.');
+}
+
+function updateStatusUI(online, message) {
+  if (statusDot) {
+    statusDot.className = 'status-dot ' + (online ? 'online' : 'offline');
+  }
+  if (statusText) {
+    statusText.textContent = message;
+  }
+  if (connectionCard) {
+    connectionCard.className = 'connection-status-card ' + (online ? 'connected' : 'disconnected');
+  }
+  if (gitPushBtn) {
+    gitPushBtn.style.display = online ? 'inline-flex' : 'none';
+  }
+}
+
+// Load Data from schedules.txt or localStorage
 async function loadData() {
-  // Try localStorage first
+  // Try fetching schedules.txt from folder
+  try {
+    const response = await fetch('schedules.txt?t=' + Date.now());
+    if (response.ok) {
+      const text = await response.text();
+      const parsed = parseTxtContent(text);
+      if (parsed && parsed.length > 0) {
+        schedules = parsed;
+        saveToLocalStorage();
+        render();
+        return;
+      }
+    }
+  } catch (e) {
+    console.log('Direct fetch skipped/restricted:', e);
+  }
+
+  // Try localStorage
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
@@ -186,32 +257,45 @@ async function loadData() {
     console.warn('LocalStorage error', e);
   }
 
-  // Try fetching schedules.txt from folder
-  try {
-    const response = await fetch('schedules.txt?t=' + Date.now());
-    if (response.ok) {
-      const text = await response.text();
-      const parsed = parseTxtContent(text);
-      if (parsed && parsed.length > 0) {
-        schedules = parsed;
-        saveData();
-        render();
-        return;
-      }
-    }
-  } catch (e) {
-    console.log('Direct fetch skipped/failed, using initial defaults', e);
-  }
-
-  // Fallback to sample data
-  schedules = [...INITIAL_SCHEDULES];
-  saveData();
+  // Initial fallback
+  schedules = [
+    { sn: 1, name: 'Math Assignment', subject: 'Math', due: '2026-10-18', time: '10:00 AM', duration: '2 Hours' },
+    { sn: 2, name: 'Math Quiz', subject: 'Math', due: '2026-10-15', time: '11:59 PM', duration: '30 Minutes' },
+    { sn: 3, name: 'Operating system CIE 1 Quiz', subject: 'OS', due: '2026-10-14', time: '02:00 PM', duration: '1 Hour' }
+  ];
+  saveToLocalStorage();
   render();
 }
 
-// Save to localStorage
-function saveData() {
+function saveToLocalStorage() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(schedules));
+}
+
+// Save directly to disk via app.py
+async function saveDirectlyToDisk(showAlert = true) {
+  saveToLocalStorage();
+  const content = generateTxtContent();
+
+  if (isServerConnected) {
+    try {
+      const res = await fetch('/api/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: content
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          if (showAlert) showToast('✅ Directly updated schedules.txt on your disk!');
+          return true;
+        }
+      }
+    } catch (e) {
+      console.warn('Server save failed:', e);
+    }
+  }
+
+  return false;
 }
 
 // Render Table
@@ -308,7 +392,7 @@ function render() {
 }
 
 // Move Row Up or Down
-window.moveRow = function(index, direction) {
+window.moveRow = async function(index, direction) {
   const targetIndex = index + direction;
   if (targetIndex < 0 || targetIndex >= schedules.length) return;
 
@@ -316,19 +400,21 @@ window.moveRow = function(index, direction) {
   schedules[index] = schedules[targetIndex];
   schedules[targetIndex] = temp;
 
-  saveData();
   render();
+  await saveDirectlyToDisk(false);
 };
 
 // Delete Row
-window.deleteRow = function(index) {
+window.deleteRow = async function(index) {
   const item = schedules[index];
   if (!confirm(`Are you sure you want to delete "${item.name}"?`)) return;
 
   schedules.splice(index, 1);
-  saveData();
   render();
-  showToast(`Deleted schedule "${item.name}"`);
+  const saved = await saveDirectlyToDisk(true);
+  if (!saved) {
+    showToast(`Deleted schedule "${item.name}"`);
+  }
 };
 
 // Open Edit / Add Modal
@@ -362,24 +448,21 @@ function closeModal() {
   editModal.classList.remove('active');
 }
 
-// Export to schedules.txt
-function exportToTxt() {
+// Export / Save schedules.txt
+async function exportToTxt() {
   if (schedules.length === 0) {
-    showToast('Add at least one schedule before exporting.');
+    showToast('Add at least one schedule before saving.');
     return;
   }
 
-  const lines = [
-    '# CSE - Section E Important Dates & Schedules',
-    '# Format: Serial Number | Name | Subject | Due Date | Due Time | Duration',
-    ''
-  ];
+  // Try direct server save first
+  const directlySaved = await saveDirectlyToDisk(true);
+  if (directlySaved) {
+    return; // File updated directly on disk!
+  }
 
-  schedules.forEach(item => {
-    lines.push(`${item.sn} | ${item.name} | ${item.subject} | ${item.due} | ${item.time || '11:59 PM'} | ${item.duration}`);
-  });
-
-  const content = lines.join('\n');
+  // Fallback: Trigger browser download if running offline without server
+  const content = generateTxtContent();
   const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -390,15 +473,14 @@ function exportToTxt() {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 
-  saveData();
-  showToast('✅ Downloaded schedules.txt! Replace it in your project folder.');
+  showToast('📁 Downloaded schedules.txt! Replace it in this project folder, or run start_editor.bat to auto-save directly.');
 }
 
 // Setup Event Listeners
 function setupEventListeners() {
   // Quick Add Form
   if (quickAddForm) {
-    quickAddForm.addEventListener('submit', (e) => {
+    quickAddForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const newEntry = {
         sn: Number(quickSn.value) || (schedules.length + 1),
@@ -410,7 +492,6 @@ function setupEventListeners() {
       };
 
       schedules.push(newEntry);
-      saveData();
       render();
 
       quickName.value = '';
@@ -420,13 +501,16 @@ function setupEventListeners() {
       quickDuration.value = '';
       quickName.focus();
 
-      showToast(`Added schedule "${newEntry.name}"`);
+      const saved = await saveDirectlyToDisk(true);
+      if (!saved) {
+        showToast(`Added schedule "${newEntry.name}"`);
+      }
     });
   }
 
   // Modal Save
   if (editForm) {
-    editForm.addEventListener('submit', (e) => {
+    editForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const idx = parseInt(editIndex.value, 10);
       const entry = {
@@ -440,15 +524,17 @@ function setupEventListeners() {
 
       if (idx >= 0 && idx < schedules.length) {
         schedules[idx] = entry;
-        showToast(`Updated "${entry.name}"`);
       } else {
         schedules.push(entry);
-        showToast(`Added "${entry.name}"`);
       }
 
-      saveData();
       render();
       closeModal();
+
+      const saved = await saveDirectlyToDisk(true);
+      if (!saved) {
+        showToast(`Saved "${entry.name}"`);
+      }
     });
   }
 
@@ -464,9 +550,29 @@ function setupEventListeners() {
     });
   }
 
-  // Download schedules.txt
+  // Download / Save schedules.txt
   if (downloadTxtBtn) downloadTxtBtn.addEventListener('click', exportToTxt);
   if (downloadTxtTopBtn) downloadTxtTopBtn.addEventListener('click', exportToTxt);
+
+  // 1-Click Git Push
+  if (gitPushBtn) {
+    gitPushBtn.addEventListener('click', async () => {
+      showToast('Pushing schedules.txt to Git origin main...');
+      try {
+        const res = await fetch('/api/git-push', { method: 'POST' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            showToast('🚀 Pushed to Git successfully!');
+          } else {
+            showToast('Git error: ' + (data.error || 'Failed'));
+          }
+        }
+      } catch (e) {
+        showToast('Could not reach Git endpoint. Try terminal commands below.');
+      }
+    });
+  }
 
   // Import Plain Text file
   if (importFileInput) {
@@ -475,13 +581,13 @@ function setupEventListeners() {
       if (!file) return;
 
       const reader = new FileReader();
-      reader.onload = (evt) => {
+      reader.onload = async (evt) => {
         const textContent = evt.target.result;
         const parsed = parseTxtContent(textContent);
         if (parsed && parsed.length > 0) {
           schedules = parsed;
-          saveData();
           render();
+          await saveDirectlyToDisk(true);
           showToast(`Imported ${parsed.length} schedules from ${file.name}`);
         } else {
           showToast('Could not find schedule rows in that file.');
@@ -494,23 +600,23 @@ function setupEventListeners() {
 
   // Auto-Renumber
   if (renumberBtn) {
-    renumberBtn.addEventListener('click', () => {
+    renumberBtn.addEventListener('click', async () => {
       schedules.forEach((item, i) => {
         item.sn = i + 1;
       });
-      saveData();
       render();
+      await saveDirectlyToDisk(false);
       showToast('Renumbered Serial Numbers 1 to ' + schedules.length);
     });
   }
 
   // Clear All
   if (clearAllBtn) {
-    clearAllBtn.addEventListener('click', () => {
+    clearAllBtn.addEventListener('click', async () => {
       if (confirm('Are you sure you want to clear all schedule items?')) {
         schedules = [];
-        saveData();
         render();
+        await saveDirectlyToDisk(true);
         showToast('Cleared all items');
       }
     });
@@ -518,10 +624,14 @@ function setupEventListeners() {
 
   // Load Defaults
   if (loadDefaultsBtn) {
-    loadDefaultsBtn.addEventListener('click', () => {
-      schedules = [...INITIAL_SCHEDULES];
-      saveData();
+    loadDefaultsBtn.addEventListener('click', async () => {
+      schedules = [
+        { sn: 1, name: 'Math Assignment', subject: 'Math', due: '2026-10-18', time: '10:00 AM', duration: '2 Hours' },
+        { sn: 2, name: 'Math Quiz', subject: 'Math', due: '2026-10-15', time: '11:59 PM', duration: '30 Minutes' },
+        { sn: 3, name: 'Operating system CIE 1 Quiz', subject: 'OS', due: '2026-10-14', time: '02:00 PM', duration: '1 Hour' }
+      ];
       render();
+      await saveDirectlyToDisk(true);
       showToast('Loaded sample schedules');
     });
   }

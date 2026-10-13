@@ -96,6 +96,28 @@
     </div>
   </section>
 
+  <!-- Live Disk Sync Status Banner -->
+  <section class="connection-banner-section">
+    <div class="container">
+      <div class="connection-status-card" id="connectionCard">
+        <div class="status-indicator-wrap">
+          <span class="status-dot pulse" id="statusDot"></span>
+          <span class="status-text" id="statusText">Checking connection to schedules.txt...</span>
+        </div>
+        <div class="status-action-wrap" id="statusActionWrap">
+          <button class="btn btn-sm btn-outline" id="gitPushBtn">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            <span>🚀 1-Click Push to Git</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Main Content -->
   <main class="main-content">
     <div class="container">
@@ -137,11 +159,11 @@
           </button>
           <button class="btn btn-success" id="downloadTxtBtn">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+              <polyline points="17 21 17 13 7 13 7 21"></polyline>
+              <polyline points="7 3 7 8 15 8"></polyline>
             </svg>
-            Save &amp; Download schedules.txt
+            Save to schedules.txt
           </button>
         </div>
       </div>
