@@ -2,7 +2,9 @@
 # Format: Serial Number | Name | Subject | Due Date | Due Time | Duration
 # Lines starting with # are comments. You can edit this file offline in Notepad or any text editor.
 
-1 | Math Assignment | Math | 2026-10-15 | 10:00 AM | 2 Hours
+1 | Math Assignment | Math | 2026-10-15 | 10:00 AM | 30 Minutes
 2 | Math Quiz | Math | 2026-10-15 | 04:30 PM | 30 Minutes
 3 | Operating system CIE 1 Quiz | OS | 2026-10-14 | 04:30 PM | 1 Hour
-4 | DSA CIE 1 Quiz | DSA | 2026-10-16 | 01:30 PM | 1 Hour
+4 | DSA CIE 1 Quiz | DSA | 2026-10-16 | 01:30 PM | 30 Minutes
+5 | ADLD CIE 1 Quiz | ADLD | 2026-10-15 | 01:30 PM | 30 Minutes
+
