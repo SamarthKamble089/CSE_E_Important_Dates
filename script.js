@@ -61,6 +61,7 @@ const liveDate = document.getElementById('liveDate');
 // Init
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
+  initTableScale();
   startClock();
   setupEventListeners();
   setupTimetableModal();
@@ -112,6 +113,66 @@ function initTheme() {
       showToast('Switched to Light Mode ☀️');
     });
   }
+}
+
+// Table Scale / Density Manager (Small/Phone scale by default)
+function initTableScale() {
+  const tableCard = document.getElementById('tableCard') || document.querySelector('.table-container-card');
+  const compactBtn = document.getElementById('scaleCompactBtn');
+  const normalBtn = document.getElementById('scaleNormalBtn');
+
+  function setScale(scale, save = true) {
+    if (!tableCard) return;
+    if (scale === 'normal') {
+      tableCard.classList.remove('scale-compact');
+      tableCard.classList.add('scale-normal');
+      if (compactBtn) compactBtn.classList.remove('active');
+      if (normalBtn) normalBtn.classList.add('active');
+    } else {
+      tableCard.classList.remove('scale-normal');
+      tableCard.classList.add('scale-compact');
+      if (compactBtn) compactBtn.classList.add('active');
+      if (normalBtn) normalBtn.classList.remove('active');
+    }
+    if (save) {
+      try {
+        localStorage.setItem('csee_table_scale', scale);
+      } catch (e) {}
+    }
+  }
+
+  let savedScale = 'compact';
+  try {
+    savedScale = localStorage.getItem('csee_table_scale') || 'compact';
+  } catch (e) {}
+
+  setScale(savedScale, false);
+
+  if (compactBtn) {
+    compactBtn.addEventListener('click', () => {
+      setScale('compact');
+      showToast('Switched to Small / Fit Phone scale 📱');
+    });
+  }
+
+  if (normalBtn) {
+    normalBtn.addEventListener('click', () => {
+      setScale('normal');
+      showToast('Switched to Regular scale 🖥️');
+    });
+  }
+}
+
+// Helper to abbreviate duration strings for mobile view
+function getShortDuration(dur) {
+  if (!dur || dur === '--' || dur.trim().toUpperCase() === 'NULL') return '--';
+  const s = String(dur).trim();
+  if (/^full\s*day/i.test(s)) return 'Full Day';
+  return s
+    .replace(/\s*minutes?/gi, 'm')
+    .replace(/\s*hours?/gi, 'h')
+    .replace(/\s*days?/gi, 'd')
+    .trim();
 }
 
 // Live Clock
@@ -360,6 +421,12 @@ function formatDisplayDate(dateStr, timeStr) {
     year: 'numeric'
   });
 
+  const monthDay = target.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric'
+  });
+  const yearStr = String(target.getFullYear());
+
   const now = new Date();
   const diffMs = target.getTime() - now.getTime();
   const diffHours = diffMs / (1000 * 60 * 60);
@@ -398,7 +465,7 @@ function formatDisplayDate(dateStr, timeStr) {
     }
   }
 
-  return { formatted, timeDisplay: timeStr || '11:59 PM', countdown, status, target };
+  return { formatted, monthDay, yearStr, timeDisplay: timeStr || '11:59 PM', countdown, status, target };
 }
 
 // Escape HTML
@@ -602,7 +669,7 @@ function renderTable(recentlyOverCount = 0, hiddenCount = 0) {
         </td>
 
         <td class="col-subject">
-          <span class="subject-pill">
+          <span class="subject-pill" title="${escapeHtml(item.subject)}">
             <span class="subject-dot"></span>
             <span>${escapeHtml(item.subject)}</span>
           </span>
@@ -610,7 +677,9 @@ function renderTable(recentlyOverCount = 0, hiddenCount = 0) {
 
         <td class="col-due">
           <div class="due-date-cell">
-            <span class="due-date-main">${dateInfo.formatted}</span>
+            <span class="due-date-main">
+              <span class="date-md">${escapeHtml(dateInfo.monthDay || dateInfo.formatted)}</span><span class="date-yr">${dateInfo.yearStr ? ', ' + dateInfo.yearStr : ''}</span>
+            </span>
             ${dateInfo.countdown ? `<span class="due-countdown-tag ${dateInfo.countdown.cls}">${dateInfo.countdown.text}</span>` : ''}
           </div>
         </td>
@@ -621,19 +690,20 @@ function renderTable(recentlyOverCount = 0, hiddenCount = 0) {
               <circle cx="12" cy="12" r="10"></circle>
               <polyline points="12 6 12 12 16 14"></polyline>
             </svg>
-            <span>${escapeHtml(dateInfo.timeDisplay)}</span>
+            <span class="due-time-val">${escapeHtml(dateInfo.timeDisplay)}</span>
           </span>
         </td>
 
         <td class="col-duration">
-          <span class="duration-chip">
+          <span class="duration-chip" title="${escapeHtml(item.duration)}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
               <line x1="16" y1="2" x2="16" y2="6"></line>
               <line x1="8" y1="2" x2="8" y2="6"></line>
               <line x1="3" y1="10" x2="21" y2="10"></line>
             </svg>
-            <span>${escapeHtml(item.duration)}</span>
+            <span class="dur-full">${escapeHtml(item.duration)}</span>
+            <span class="dur-short">${escapeHtml(getShortDuration(item.duration))}</span>
           </span>
         </td>
       </tr>

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=2">
   <script>
     (function() {
       try {
@@ -213,26 +213,48 @@
       </div>
 
       <!-- Schedules Table Container -->
-      <div class="table-container-card">
+      <div class="table-container-card scale-compact" id="tableCard">
         <div class="table-header-meta">
           <div class="table-title-wrap">
             <h2 class="section-title">Academic Schedule Sheet</h2>
             <span class="read-only-badge">VIEW ONLY</span>
             <span class="hidden-pill" id="hiddenStatusBadge" style="display: none;"></span>
           </div>
-          <span class="results-count" id="resultsCount">Showing active entries</span>
+
+          <div class="table-meta-right">
+            <!-- Quick Scale Toggle (Small/Phone vs Regular) -->
+            <div class="table-scale-switch" role="group" aria-label="Table scale view">
+              <span class="scale-label">Table:</span>
+              <button type="button" class="scale-btn active" id="scaleCompactBtn" data-scale="compact" title="Small scale: fits mobile screen easily without scrolling">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                  <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                </svg>
+                <span>Small / Phone</span>
+              </button>
+              <button type="button" class="scale-btn" id="scaleNormalBtn" data-scale="normal" title="Regular scale with horizontal scrolling">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                  <line x1="8" y1="21" x2="16" y2="21"></line>
+                  <line x1="12" y1="17" x2="12" y2="21"></line>
+                </svg>
+                <span>Regular</span>
+              </button>
+            </div>
+            <span class="results-count" id="resultsCount">Showing active entries</span>
+          </div>
         </div>
 
         <div class="table-responsive">
           <table class="schedules-table" id="schedulesTable">
             <thead>
               <tr>
-                <th class="col-sn" scope="col">Serial Number</th>
+                <th class="col-sn" scope="col"><span class="th-desktop">Serial Number</span><span class="th-mobile">#</span></th>
                 <th class="col-name" scope="col">Name</th>
                 <th class="col-subject" scope="col">Subject</th>
                 <th class="col-due" scope="col">Due Date</th>
-                <th class="col-time" scope="col">Due Time</th>
-                <th class="col-duration" scope="col">Duration</th>
+                <th class="col-time" scope="col"><span class="th-desktop">Due Time</span><span class="th-mobile">Time</span></th>
+                <th class="col-duration" scope="col"><span class="th-desktop">Duration</span><span class="th-mobile">Dur</span></th>
               </tr>
             </thead>
             <tbody id="schedulesTableBody">
@@ -307,6 +329,6 @@
     </div>
   </footer>
 
-  <script src="script.js"></script>
+  <script src="script.js?v=2"></script>
 </body>
 </html>
