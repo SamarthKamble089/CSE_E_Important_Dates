@@ -55,10 +55,58 @@ const toastNotification = document.getElementById('toastNotification');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+  initTheme();
   setupEventListeners();
   loadData();
   checkConnection();
 });
+
+// Theme Manager (Dark & Light Mode, default: Dark)
+function initTheme() {
+  const darkBtn = document.getElementById('themeDarkBtn');
+  const lightBtn = document.getElementById('themeLightBtn');
+
+  function applyTheme(theme, save = true) {
+    document.documentElement.setAttribute('data-theme', theme);
+    if (save) {
+      try {
+        localStorage.setItem('csee_theme', theme);
+      } catch (e) {
+        console.warn('LocalStorage error saving theme', e);
+      }
+    }
+    if (darkBtn && lightBtn) {
+      if (theme === 'light') {
+        lightBtn.classList.add('active');
+        darkBtn.classList.remove('active');
+      } else {
+        darkBtn.classList.add('active');
+        lightBtn.classList.remove('active');
+      }
+    }
+  }
+
+  let savedTheme = 'dark';
+  try {
+    savedTheme = localStorage.getItem('csee_theme') || 'dark';
+  } catch (e) {}
+
+  applyTheme(savedTheme, false);
+
+  if (darkBtn) {
+    darkBtn.addEventListener('click', () => {
+      applyTheme('dark');
+      showToast('Switched to Dark Mode 🌙');
+    });
+  }
+
+  if (lightBtn) {
+    lightBtn.addEventListener('click', () => {
+      applyTheme('light');
+      showToast('Switched to Light Mode ☀️');
+    });
+  }
+}
 
 // Toast Helper
 function showToast(message) {

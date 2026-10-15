@@ -21,6 +21,7 @@ const FALLBACK_SCHEDULES = [
 ];
 
 const STORAGE_KEY = 'csee_schedules_cache_v3';
+const GOOGLE_SHEETS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQQna8mqQHD8QTbdWRZs2ab7kqoYn0aEC_PwzICdqFb5g3rvitO0GEmrhSah2YARstImEAwdNA5EBmy/pub?output=csv';
 
 // State
 let rawSchedules = [];
@@ -59,10 +60,59 @@ const liveDate = document.getElementById('liveDate');
 
 // Init
 document.addEventListener('DOMContentLoaded', () => {
+  initTheme();
   startClock();
   setupEventListeners();
+  setupTimetableModal();
   loadSchedulesData();
 });
+
+// Theme Manager (Dark & Light Mode, default: Dark)
+function initTheme() {
+  const darkBtn = document.getElementById('themeDarkBtn');
+  const lightBtn = document.getElementById('themeLightBtn');
+
+  function applyTheme(theme, save = true) {
+    document.documentElement.setAttribute('data-theme', theme);
+    if (save) {
+      try {
+        localStorage.setItem('csee_theme', theme);
+      } catch (e) {
+        console.warn('LocalStorage error saving theme', e);
+      }
+    }
+    if (darkBtn && lightBtn) {
+      if (theme === 'light') {
+        lightBtn.classList.add('active');
+        darkBtn.classList.remove('active');
+      } else {
+        darkBtn.classList.add('active');
+        lightBtn.classList.remove('active');
+      }
+    }
+  }
+
+  let savedTheme = 'dark';
+  try {
+    savedTheme = localStorage.getItem('csee_theme') || 'dark';
+  } catch (e) {}
+
+  applyTheme(savedTheme, false);
+
+  if (darkBtn) {
+    darkBtn.addEventListener('click', () => {
+      applyTheme('dark');
+      showToast('Switched to Dark Mode 🌙');
+    });
+  }
+
+  if (lightBtn) {
+    lightBtn.addEventListener('click', () => {
+      applyTheme('light');
+      showToast('Switched to Light Mode ☀️');
+    });
+  }
+}
 
 // Live Clock
 function startClock() {
@@ -160,7 +210,7 @@ function getEventDateTime(dateStr, timeStr) {
   return d;
 }
 
-// Parse Plain Text Schedules (schedules.txt)
+// Parse Plain Text Schedules (schedules.txt or Google Sheets CSV)
 // Supports Pipe (|), Tab (\t), or Comma (,) delimiters and # comments
 function parseTxtContent(text) {
   if (!text) return [];
@@ -176,11 +226,27 @@ function parseTxtContent(text) {
 
     let parts = [];
     if (line.includes('|')) {
-      parts = line.split('|').map(s => s.trim());
+      parts = line.split('|').map(s => s.trim().replace(/^["']|["']$/g, ''));
     } else if (line.includes('\t')) {
-      parts = line.split('\t').map(s => s.trim());
+      parts = line.split('\t').map(s => s.trim().replace(/^["']|["']$/g, ''));
     } else if (line.includes(',')) {
-      parts = line.split(',').map(s => s.trim());
+      // Split CSV respecting quotes
+      const matches = [];
+      let current = '';
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const c = line[i];
+        if (c === '"' || c === "'") {
+          inQuotes = !inQuotes;
+        } else if (c === ',' && !inQuotes) {
+          matches.push(current.trim().replace(/^["']|["']$/g, ''));
+          current = '';
+        } else {
+          current += c;
+        }
+      }
+      matches.push(current.trim().replace(/^["']|["']$/g, ''));
+      parts = matches;
     } else {
       continue;
     }
@@ -196,21 +262,14 @@ function parseTxtContent(text) {
       const subject = parts[2] || 'General';
       const due = normalizeDateString(parts[3] || '');
 
-      let time = '11:59 PM';
-      let duration = '1 Day';
+      let rawTime = parts[4] || '';
+      let rawDuration = parts[5] || '';
 
-      if (parts.length >= 6) {
-        time = normalizeTimeString(parts[4]);
-        duration = parts[5] || '1 Day';
-      } else if (parts.length === 5) {
-        if (/hour|day|min|week/i.test(parts[4])) {
-          duration = parts[4];
-          time = '11:59 PM';
-        } else {
-          time = normalizeTimeString(parts[4]);
-          duration = '1 Day';
-        }
-      }
+      const isTimeNull = !rawTime || rawTime.trim().toUpperCase() === 'NULL';
+      const isDurationNull = !rawDuration || rawDuration.trim().toUpperCase() === 'NULL';
+
+      let time = isTimeNull ? '' : normalizeTimeString(rawTime);
+      let duration = isDurationNull ? '--' : rawDuration;
 
       rows.push({ sn, name, subject, due, time, duration });
     }
@@ -219,7 +278,7 @@ function parseTxtContent(text) {
   return rows;
 }
 
-// Load Schedules from schedules.txt / Storage / Fallback
+// Load Schedules from Google Sheets / schedules.txt / Storage / Fallback
 async function loadSchedulesData() {
   const isFileProtocol = window.location.protocol === 'file:';
 
@@ -234,36 +293,48 @@ async function loadSchedulesData() {
     console.warn('Could not read cached schedules', e);
   }
 
-  // 2. Fetch schedules.txt from repository folder
+  // 2. Try fetching from live Google Sheets CSV first
+  if (GOOGLE_SHEETS_CSV_URL && !isFileProtocol) {
+    try {
+      const gResponse = await fetch(GOOGLE_SHEETS_CSV_URL + '&t=' + Date.now());
+      if (gResponse.ok) {
+        const csvData = await gResponse.text();
+        const parsed = parseTxtContent(csvData);
+        if (parsed && parsed.length > 0) {
+          rawSchedules = parsed;
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(rawSchedules));
+          showToast('Live synced with Google Sheet! 📊');
+          processAndRender();
+          return;
+        }
+      }
+    } catch (gErr) {
+      console.warn('Google Sheets live fetch skipped/unavailable, falling back to local file:', gErr);
+    }
+  }
+
+  // 3. Fallback: Fetch schedules.txt from repository folder
   try {
     const response = await fetch('schedules.txt?t=' + Date.now());
-    if (!response.ok) {
-      throw new Error(`HTTP error ${response.status}`);
-    }
-    const textData = await response.text();
-    const parsed = parseTxtContent(textData);
-    if (parsed && parsed.length > 0) {
-      rawSchedules = parsed;
-      syncStatus.textContent = 'schedules.txt';
-      syncStatusSub.textContent = 'Synced Live via Git';
-      showToast('Loaded latest schedules from schedules.txt');
-      processAndRender();
-      return;
+    if (response.ok) {
+      const textData = await response.text();
+      const parsed = parseTxtContent(textData);
+      if (parsed && parsed.length > 0) {
+        rawSchedules = parsed;
+        showToast('Loaded schedules from local file');
+        processAndRender();
+        return;
+      }
     }
   } catch (err) {
     console.log('Direct fetch restricted or file not served via HTTP:', err);
 
     if (isFileProtocol && fileProtocolBanner) {
       fileProtocolBanner.style.display = 'flex';
-      syncStatus.textContent = 'Local file://';
-      syncStatusSub.textContent = 'Select schedules.txt above';
-    } else {
-      syncStatus.textContent = 'Local Cache';
-      syncStatusSub.textContent = 'From offline editor';
     }
   }
 
-  // 3. Fallback to cached or predefined data
+  // 4. Fallback to cached or predefined data
   if (cachedData && Array.isArray(cachedData) && cachedData.length > 0) {
     rawSchedules = cachedData;
   } else {
@@ -275,11 +346,12 @@ async function loadSchedulesData() {
 
 // Format Date & Time Countdown
 function formatDisplayDate(dateStr, timeStr) {
-  if (!dateStr) return { formatted: 'TBD', timeDisplay: timeStr || 'TBD', countdown: null, status: 'unknown' };
+  const displayTime = (!timeStr || timeStr.trim().toUpperCase() === 'NULL') ? '--' : timeStr;
+  if (!dateStr) return { formatted: 'TBD', timeDisplay: displayTime, countdown: null, status: 'unknown' };
 
   const target = getEventDateTime(dateStr, timeStr);
   if (!target) {
-    return { formatted: dateStr, timeDisplay: timeStr || 'TBD', countdown: null, status: 'unknown' };
+    return { formatted: dateStr, timeDisplay: displayTime, countdown: null, status: 'unknown' };
   }
 
   const formatted = target.toLocaleDateString('en-US', {
@@ -649,8 +721,8 @@ function setupEventListeners() {
         if (parsed && parsed.length > 0) {
           rawSchedules = parsed;
           localStorage.setItem(STORAGE_KEY, JSON.stringify(rawSchedules));
-          syncStatus.textContent = file.name;
-          syncStatusSub.textContent = 'Manually loaded text file';
+          if (syncStatus) syncStatus.textContent = file.name;
+          if (syncStatusSub) syncStatusSub.textContent = 'Manually loaded text file';
           showToast(`Successfully loaded ${parsed.length} schedules from ${file.name}`);
           processAndRender();
         } else {
@@ -661,12 +733,61 @@ function setupEventListeners() {
     });
   }
 
-  // Download Current schedules.txt
+  // Download Current schedules.txt (if button present)
   if (downloadCurrentTxtBtn) {
     downloadCurrentTxtBtn.addEventListener('click', () => {
       exportCurrentSchedulesToTxt();
     });
   }
+}
+
+// Time Table Lightbox Modal
+function setupTimetableModal() {
+  const modal = document.getElementById('timetableModal');
+  const openCard = document.getElementById('openTimetableCard');
+  const openBtn = document.getElementById('openTimetableBtn');
+  const openFooterBtn = document.getElementById('openTimetableFooterBtn');
+  const closeBtn = document.getElementById('closeTimetableBtn');
+
+  function openModal() {
+    if (!modal) return;
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    if (!modal) return;
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  if (openCard) {
+    openCard.addEventListener('click', openModal);
+    openCard.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        openModal();
+      }
+    });
+  }
+
+  if (openBtn) openBtn.addEventListener('click', openModal);
+  if (openFooterBtn) openFooterBtn.addEventListener('click', openModal);
+  if (closeBtn) closeBtn.addEventListener('click', closeModal);
+
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        closeModal();
+      }
+    });
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal && modal.classList.contains('active')) {
+      closeModal();
+    }
+  });
 }
 
 // Export Current Schedules to Plain Text (schedules.txt)

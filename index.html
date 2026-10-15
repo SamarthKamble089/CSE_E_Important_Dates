@@ -9,6 +9,16 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <script>
+    (function() {
+      try {
+        const saved = localStorage.getItem('csee_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', saved);
+      } catch (e) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script>
 </head>
 <body class="view-page">
   <!-- Ambient background glow elements -->
@@ -31,6 +41,30 @@
       </div>
 
       <div class="header-right">
+        <!-- Theme Mode Switcher -->
+        <div class="theme-switch" role="group" aria-label="Theme mode switcher">
+          <button type="button" class="theme-opt-btn active" id="themeDarkBtn" title="Switch to Dark Mode" aria-label="Dark Mode">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+            <span>Dark</span>
+          </button>
+          <button type="button" class="theme-opt-btn" id="themeLightBtn" title="Switch to Light Mode" aria-label="Light Mode">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="5"></circle>
+              <line x1="12" y1="1" x2="12" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="23"></line>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+              <line x1="1" y1="12" x2="3" y2="12"></line>
+              <line x1="21" y1="12" x2="23" y2="12"></line>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+            <span>Light</span>
+          </button>
+        </div>
+
         <div class="live-clock-card">
           <div class="clock-label">CURRENT TIME (IST)</div>
           <div class="clock-time" id="liveClock">--:--:--</div>
@@ -84,17 +118,24 @@
         </div>
       </div>
 
-      <div class="stat-card">
-        <div class="stat-icon sync-icon">
+      <div class="stat-card stat-card-interactive" id="openTimetableCard" role="button" tabindex="0" title="Click to view weekly class timetable">
+        <div class="stat-icon timetable-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="23 4 23 10 17 10"></polyline>
-            <polyline points="1 20 1 14 7 14"></polyline>
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+            <circle cx="8" cy="14" r="1" fill="currentColor"></circle>
+            <circle cx="12" cy="14" r="1" fill="currentColor"></circle>
+            <circle cx="16" cy="14" r="1" fill="currentColor"></circle>
+            <circle cx="8" cy="18" r="1" fill="currentColor"></circle>
+            <circle cx="12" cy="18" r="1" fill="currentColor"></circle>
+            <circle cx="16" cy="18" r="1" fill="currentColor"></circle>
           </svg>
         </div>
         <div class="stat-info">
-          <span class="stat-value sync-tag" id="syncStatus">schedules.txt</span>
-          <span class="stat-title" id="syncStatusSub">Data Source</span>
+          <span class="stat-value timetable-val">Time Table</span>
+          <span class="stat-title timetable-sub">Section E &bull; View ↗</span>
         </div>
       </div>
     </div>
@@ -134,7 +175,17 @@
             </select>
           </div>
 
-          <button class="btn btn-ghost btn-icon-only" id="refreshBtn" title="Reload schedules.txt data">
+          <button class="btn btn-secondary" id="openTimetableBtn" type="button" title="View Weekly Class Time Table">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            <span>Time Table</span>
+          </button>
+
+          <button class="btn btn-ghost btn-icon-only" id="refreshBtn" title="Reload schedules data">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
             </svg>
@@ -199,16 +250,46 @@
         </div>
       </div>
 
-      <!-- Workflow Guide info pill -->
-      <div class="workflow-hint-card">
-        <div class="hint-icon">💡</div>
-        <div class="hint-text">
-          <strong>Notice:</strong> This schedule is synced with <code>schedules.txt</code> in the repository. It updates automatically when new changes are published via Git.
-        </div>
-      </div>
-
     </div>
   </main>
+
+  <!-- Time Table Modal / Lightbox -->
+  <div class="modal-overlay" id="timetableModal" role="dialog" aria-modal="true" aria-labelledby="timetableTitle">
+    <div class="modal-card timetable-modal-card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="brand-badge" style="margin-bottom: 0.25rem;">
+            <span>SECTION E &bull; SEMESTER TIMETABLE</span>
+          </div>
+          <h3 id="timetableTitle">Class Time Table</h3>
+        </div>
+        <div class="modal-header-actions">
+          <a href="Time_Table.jpeg" download="CSE_E_Time_Table.jpeg" class="btn btn-sm btn-secondary" title="Download Time Table Image">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span>Download</span>
+          </a>
+          <a href="Time_Table.jpeg" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-ghost" title="Open full resolution in new tab">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+              <polyline points="15 3 21 3 21 9"></polyline>
+              <line x1="10" y1="14" x2="21" y2="3"></line>
+            </svg>
+            <span>Full View</span>
+          </a>
+          <button class="modal-close-btn" id="closeTimetableBtn" aria-label="Close timetable modal">&times;</button>
+        </div>
+      </div>
+      <div class="timetable-modal-body">
+        <div class="timetable-img-wrapper">
+          <img src="Time_Table.jpeg" alt="CSE Section E Class Time Table" class="timetable-img" onerror="this.src='Time_Table.png'" id="timetableImg">
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Notification Toast -->
   <div class="toast" id="toastNotification" role="alert"></div>
@@ -221,7 +302,7 @@
         <p class="text-muted">Displaying columns: Serial Number &bull; Name &bull; Subject &bull; Due Date &bull; Due Time &bull; Duration</p>
       </div>
       <div class="footer-actions">
-        <button class="btn btn-sm btn-ghost" id="downloadCurrentTxtBtn">Download schedules.txt</button>
+        <button class="btn btn-sm btn-ghost" id="openTimetableFooterBtn">View Time Table</button>
       </div>
     </div>
   </footer>
