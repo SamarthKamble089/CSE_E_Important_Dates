@@ -8,3 +8,4 @@
 4 | DSA CIE 1 Quiz | DSA | 2026-10-16 | 01:30 PM | 30 Minutes
 5 | ADLD CIE 1 Quiz | ADLD | 2026-10-15 | 01:30 PM | 30 Minutes
 6 | QCE CIE 1 Quiz | QCE | 2026-10-15 | 02:00 PM | 30 Minutes
+7 | ADLD Requiz CIE 1(Lab) | ADLD | 2026-10-16 | 11:30 AM | 30 Minutes
