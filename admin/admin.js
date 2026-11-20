@@ -7,7 +7,21 @@ const saveMessage = document.getElementById('saveMessage');
 const deadlineRows = document.getElementById('deadlineRows');
 const deadlineCount = document.getElementById('deadlineCount');
 const emptyMessage = document.getElementById('emptyMessage');
-const formHeading = document.getElementById('formHeading');
+const editDialog = document.getElementById('editDialog');
+const editForm = document.getElementById('editForm');
+const editMessage = document.getElementById('editMessage');
+const confirmEditButton = document.getElementById('confirmEditButton');
+const fieldTemplate = document.getElementById('deadlineFields');
+
+for (const form of [deadlineForm, editForm]) {
+  form.prepend(fieldTemplate.content.cloneNode(true));
+  const { day, month } = form.elements;
+  for (let i = 1; i <= 31; i++) day.add(new Option(i, String(i).padStart(2, '0')));
+  const months = new Intl.DateTimeFormat('en-IN', { month: 'short', timeZone: 'UTC' });
+  for (let i = 0; i < 12; i++) {
+    month.add(new Option(months.format(new Date(Date.UTC(2020, i, 1))), String(i + 1).padStart(2, '0')));
+  }
+}
 const saveDeadlineButton = document.getElementById('saveDeadlineButton');
 const cancelEditButton = document.getElementById('cancelEditButton');
 
@@ -99,16 +113,17 @@ async function loadDeadlines() {
     duration: item.duration || ''
   })) : [];
   render();
-  resetForm();
   saveDeadlineButton.disabled = false;
   showMessage(saveMessage, version === 'browser-preview' ? 'Preview edits are saved in this browser.' : '');
 }
 
-async function saveDeadlines(next) {
+async function saveDeadlines(next, message = saveMessage) {
   if (!version || saving) return false;
   saving = true;
+  confirmEditButton.disabled = true;
+  cancelEditButton.disabled = true;
   saveDeadlineButton.disabled = true;
-  showMessage(saveMessage, 'Saving to the website…');
+  showMessage(message, 'Saving to the website…');
   try {
     const normalized = next.map((item, index) => ({ ...item, sn: index + 1 }));
     if (version === 'browser-preview') {
@@ -122,45 +137,67 @@ async function saveDeadlines(next) {
     }
     deadlines = normalized;
     render();
-    showMessage(saveMessage, version === 'browser-preview' ? 'Saved in this browser.' : 'Saved.', 'success');
+    showMessage(message, version === 'browser-preview' ? 'Saved in this browser.' : 'Saved.', 'success');
     return true;
   } catch (error) {
-    showMessage(saveMessage, error.message, 'error');
+    showMessage(message, error.message, 'error');
     return false;
   } finally {
     saving = false;
+    confirmEditButton.disabled = false;
+    cancelEditButton.disabled = false;
     saveDeadlineButton.disabled = false;
   }
 }
 
-function resetForm() {
-  editingIndex = -1;
+function resetAddForm() {
   deadlineForm.reset();
-  document.getElementById('time').value = '23:59';
-  formHeading.textContent = 'Add a deadline';
-  saveDeadlineButton.textContent = 'Add deadline';
-  cancelEditButton.hidden = true;
+  deadlineForm.elements.year.value = new Intl.DateTimeFormat('en-IN', {
+    year: 'numeric', timeZone: 'Asia/Kolkata'
+  }).format(new Date());
+  deadlineForm.elements.clock.value = '11:59';
+}
+
+function readDeadline(form) {
+  const { title, subject, day, month, year, clock, period, duration } = form.elements;
+  const due = [year.value, month.value, day.value].join('-');
+  const date = new Date(due + 'T00:00:00Z');
+  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== due || year.value === '0000') {
+    throw new Error('Choose a valid due date.');
+  }
+  if (!title.value.trim() || !subject.value.trim()) {
+    throw new Error('Enter a deadline name and subject.');
+  }
+  return {
+    name: title.value.trim(),
+    subject: subject.value.trim(),
+    due,
+    time: clock.value ? timeForInput(clock.value + ' ' + period.value) : '',
+    duration: duration.value.trim()
+  };
 }
 
 function startEdit(index) {
+  if (!version || saving || editDialog.open) return;
   const item = deadlines[index];
   editingIndex = index;
-  document.getElementById('name').value = item.name;
-  document.getElementById('subject').value = item.subject;
-  document.getElementById('due').value = item.due;
-  document.getElementById('time').value = item.time ? timeForInput(item.time) : '';
-  document.getElementById('duration').value = item.duration;
-  formHeading.textContent = 'Edit deadline';
-  saveDeadlineButton.textContent = 'Save deadline';
-  cancelEditButton.hidden = false;
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  const { title, subject, day, month, year, clock, period, duration } = editForm.elements;
+  [year.value, month.value, day.value] = item.due.split('-');
+  title.value = item.name;
+  subject.value = item.subject;
+  [clock.value, period.value] = item.time
+    ? displayTime(timeForInput(item.time)).split(' ')
+    : ['', 'PM'];
+  duration.value = item.duration;
+  showMessage(editMessage, '');
+  editDialog.showModal();
 }
 
 async function removeDeadline(index) {
-  if (!window.confirm(`Delete “${deadlines[index].name}”?`)) return;
+  if (!version || saving) return;
+  if (!window.confirm(`Delete "${deadlines[index].name}"?`)) return;
   const next = deadlines.filter((_, current) => current !== index);
-  const saved = await saveDeadlines(next);
-  if (saved) resetForm();
+  await saveDeadlines(next);
 }
 
 loginForm.addEventListener('submit', async (event) => {
@@ -184,21 +221,33 @@ loginForm.addEventListener('submit', async (event) => {
 
 deadlineForm.addEventListener('submit', async (event) => {
   event.preventDefault();
-  const item = {
-    sn: editingIndex >= 0 ? deadlines[editingIndex].sn : deadlines.length + 1,
-    name: document.getElementById('name').value.trim(),
-    subject: document.getElementById('subject').value.trim(),
-    due: document.getElementById('due').value,
-    time: document.getElementById('time').value,
-    duration: document.getElementById('duration').value.trim()
-  };
-  const next = [...deadlines];
-  if (editingIndex >= 0) next[editingIndex] = item;
-  else next.push(item);
-  if (await saveDeadlines(next)) resetForm();
+  try {
+    if (await saveDeadlines([...deadlines, readDeadline(deadlineForm)])) resetAddForm();
+  } catch (error) {
+    showMessage(saveMessage, error.message, 'error');
+  }
 });
 
-cancelEditButton.addEventListener('click', resetForm);
+editForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (editingIndex < 0 || saving) return;
+  try {
+    const next = [...deadlines];
+    next[editingIndex] = readDeadline(editForm);
+    if (await saveDeadlines(next, editMessage)) {
+      editDialog.close();
+      showMessage(saveMessage, 'Deadline updated.', 'success');
+      deadlineRows.rows[editingIndex]?.querySelector('button')?.focus();
+    }
+  } catch (error) {
+    showMessage(editMessage, error.message, 'error');
+  }
+});
+
+cancelEditButton.addEventListener('click', () => editDialog.close());
+editDialog.addEventListener('cancel', (event) => {
+  if (saving) event.preventDefault();
+});
 document.getElementById('refreshButton').addEventListener('click', async () => {
   if (saving) return;
   try {
@@ -222,7 +271,7 @@ document.getElementById('logoutButton').addEventListener('click', async () => {
   showMessage(loginMessage, 'Signed out.');
 });
 
-document.getElementById('time').value = '23:59';
+resetAddForm();
 
 api('/api/admin/login').then(({ authenticated }) => {
   if (!authenticated) return;

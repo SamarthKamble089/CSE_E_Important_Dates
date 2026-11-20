@@ -34,16 +34,10 @@
       </header>
 
       <section class="panel form-panel">
-        <h2 id="formHeading">Add a deadline</h2>
+        <h2>Add a deadline</h2>
         <form id="deadlineForm" class="form-grid">
-          <label class="wide">Deadline / event name<input id="name" maxlength="160" required placeholder="e.g. OS CIE 2"></label>
-          <label>Subject<input id="subject" maxlength="160" required placeholder="e.g. Operating Systems"></label>
-          <label>Due date<input id="due" type="date" required></label>
-          <label>Due time (IST)<input id="time" type="time" value="23:59"></label>
-          <label>Duration<input id="duration" maxlength="160" placeholder="e.g. 1 hour"></label>
           <div class="form-actions wide">
             <button class="primary" id="saveDeadlineButton" type="submit">Add deadline</button>
-            <button class="secondary" id="cancelEditButton" type="button" hidden>Cancel edit</button>
           </div>
         </form>
         <p class="message" id="saveMessage" role="status"></p>
@@ -62,8 +56,38 @@
         </div>
         <p class="empty" id="emptyMessage" hidden>No deadlines yet. Add one using the form above.</p>
       </section>
+      <dialog id="editDialog" class="panel edit-dialog" aria-labelledby="editHeading">
+        <h2 id="editHeading">Edit deadline</h2>
+        <form id="editForm" class="form-grid">
+          <div class="form-actions wide">
+            <button class="primary" id="confirmEditButton" type="submit">Save changes</button>
+            <button class="secondary" id="cancelEditButton" type="button">Cancel</button>
+          </div>
+        </form>
+        <p class="message" id="editMessage" role="status"></p>
+      </dialog>
     </section>
   </main>
+  <template id="deadlineFields">
+    <label class="wide">Deadline / event name<input name="title" maxlength="160" required placeholder="e.g. OS CIE 2"></label>
+    <label>Subject<input name="subject" maxlength="160" required placeholder="e.g. Operating Systems"></label>
+    <label>Duration<input name="duration" maxlength="160" placeholder="e.g. 1 hour"></label>
+    <fieldset>
+      <legend>Due date</legend>
+      <div class="date-fields">
+        <select name="day" aria-label="Day" required><option value="">Day</option></select>
+        <select name="month" aria-label="Month" required><option value="">Month</option></select>
+        <input name="year" aria-label="Year" inputmode="numeric" required pattern="[0-9]{4}" maxlength="4" placeholder="Year">
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Due time (IST)</legend>
+      <div class="time-fields">
+        <input name="clock" aria-label="Time in hours and minutes" inputmode="text" placeholder="e.g. 9:30" pattern="(0?[1-9]|1[0-2]):[0-5][0-9]" maxlength="5">
+        <select name="period" aria-label="AM or PM"><option>AM</option><option selected>PM</option></select>
+      </div>
+    </fieldset>
+  </template>
   <script src="/schedule-data.js" defer></script>
   <script src="/admin/admin.js" defer></script>
 </body>
