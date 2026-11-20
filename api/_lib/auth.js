@@ -1,10 +1,12 @@
 const crypto = require('crypto');
 
 const COOKIE_NAME = 'csee_admin_session';
-const SESSION_SECONDS = 60 * 60 * 8;
+const SESSION_SECONDS = 5 * 60;
 
 const testingPreview = process.env.VERCEL_ENV === 'preview' && process.env.VERCEL_GIT_COMMIT_REF === 'testing';
-const sessionSecret = () => process.env.ADMIN_SESSION_SECRET || (testingPreview ? 'csee-testing-admin-admin' : '');
+const sessionSecret = () => testingPreview
+  ? 'csee-testing-browser-preview-v2'
+  : process.env.ADMIN_SESSION_SECRET;
 
 function safeEqual(a, b) {
   const left = Buffer.from(String(a));
@@ -25,12 +27,12 @@ function sign(value) {
   return crypto.createHmac('sha256', sessionSecret()).update(value).digest('hex');
 }
 
-function createSession() {
-  const payload = Buffer.from(JSON.stringify({ expires: Date.now() + SESSION_SECONDS * 1000 })).toString('base64url');
+function createSession(idleExpires) {
+  const payload = Buffer.from(JSON.stringify({ idleExpires })).toString('base64url');
   return `${payload}.${sign(payload)}`;
 }
 
-function hasValidSession(req) {
+function sessionExpiry(req) {
   if (!sessionSecret()) return false;
   const token = getCookie(req, COOKIE_NAME);
   const separator = token.lastIndexOf('.');
@@ -40,10 +42,20 @@ function hasValidSession(req) {
   if (!safeEqual(signature, sign(payload))) return false;
   try {
     const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
-    return Number(data.expires) > Date.now();
+    return Number.isFinite(data.idleExpires) && data.idleExpires > Date.now() ? data.idleExpires : false;
   } catch {
     return false;
   }
+}
+
+function hasValidSession(req) {
+  return Boolean(sessionExpiry(req));
+}
+
+function renewSession(res) {
+  const expiresAt = Date.now() + SESSION_SECONDS * 1000;
+  setSessionCookie(res, createSession(expiresAt));
+  return expiresAt;
 }
 
 function setSessionCookie(res, value) {
@@ -64,4 +76,4 @@ function requireAdmin(req, res) {
   return true;
 }
 
-module.exports = { createSession, setSessionCookie, clearSessionCookie, requireAdmin, safeEqual, hasValidSession, testingPreview, sessionSecret };
+module.exports = { renewSession, sessionExpiry, clearSessionCookie, requireAdmin, safeEqual, testingPreview, sessionSecret };

@@ -27,7 +27,7 @@ Official academic schedule and important dates portal for **CSE - Section E**.
 
 3. **Admin deadline editor (`/admin`)**:
    - Open `/admin` directly on the Vercel preview for `testing`. The public homepage has no admin link.
-   - On the `testing` preview, sign in with `admin` for both fields. No custom environment variables are required. Edits are saved in the current browser and appear on the public preview in that browser.
+   - On the `testing` preview, sign in as `admin` with the preview password. The server stores a salted scrypt hash. No custom environment variables are required. Edits are saved in the current browser and appear on the public preview in that browser.
    - Shared saves require a separately configured deployment with the credentials and GitHub token from `.env.example`. Shared saves commit to `schedules.txt` on `testing`.
    - The editor starts with the published Google Sheet. After the first save, the preview uses the saved schedule. Further edits to the sheet do not sync to the preview.
 

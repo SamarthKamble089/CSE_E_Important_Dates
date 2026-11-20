@@ -5,8 +5,7 @@ const { createHash, randomBytes } = require('node:crypto');
 const { GOOGLE_SHEETS_CSV_URL } = require('./schedule-data');
 
 process.env.NODE_ENV = 'development';
-process.env.ADMIN_USERNAME = 'admin';
-process.env.ADMIN_PASSWORD = 'admin';
+process.env.CSEE_LOCAL_PREVIEW = '1';
 process.env.ADMIN_SESSION_SECRET = randomBytes(32).toString('hex');
 process.env.GITHUB_TOKEN = 'local-preview';
 
