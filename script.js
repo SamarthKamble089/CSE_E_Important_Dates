@@ -21,7 +21,7 @@ const FALLBACK_SCHEDULES = [
 ];
 
 const STORAGE_KEY = 'csee_schedules_cache_v3';
-const GOOGLE_SHEETS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQQna8mqQHD8QTbdWRZs2ab7kqoYn0aEC_PwzICdqFb5g3rvitO0GEmrhSah2YARstImEAwdNA5EBmy/pub?output=csv';
+
 
 // State
 let rawSchedules = [];
@@ -205,47 +205,6 @@ function showToast(message) {
   }, 3200);
 }
 
-// Format 12-hour AM/PM string
-function format12Hour(hours, minutes) {
-  const h = hours % 12 || 12;
-  const m = String(minutes).padStart(2, '0');
-  const period = hours >= 12 ? 'PM' : 'AM';
-  return `${String(h).padStart(2, '0')}:${m} ${period}`;
-}
-
-// Normalize Time string
-function normalizeTimeString(rawTime) {
-  if (!rawTime) return '11:59 PM';
-  const str = String(rawTime).trim();
-  if (!str) return '11:59 PM';
-
-  const match12 = str.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
-  if (match12) {
-    let h = parseInt(match12[1], 10);
-    const m = parseInt(match12[2], 10);
-    const period = match12[3] ? match12[3].toUpperCase() : null;
-    if (period) {
-      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} ${period}`;
-    } else {
-      return format12Hour(h, m);
-    }
-  }
-
-  return str;
-}
-
-// Normalize Date string (YYYY-MM-DD)
-function normalizeDateString(rawDate) {
-  if (!rawDate) return '';
-  if (/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) return rawDate;
-
-  const parsed = new Date(rawDate);
-  if (!isNaN(parsed.getTime())) {
-    return parsed.toISOString().split('T')[0];
-  }
-  return rawDate;
-}
-
 // Combine Due Date + Due Time into a JavaScript Date object
 function getEventDateTime(dateStr, timeStr) {
   if (!dateStr) return null;
@@ -271,74 +230,6 @@ function getEventDateTime(dateStr, timeStr) {
   return d;
 }
 
-// Parse Plain Text Schedules (schedules.txt or Google Sheets CSV)
-// Supports Pipe (|), Tab (\t), or Comma (,) delimiters and # comments
-function parseTxtContent(text) {
-  if (!text) return [];
-
-  const lines = text.split(/\r?\n/);
-  const rows = [];
-
-  for (let rawLine of lines) {
-    const line = rawLine.trim();
-    if (!line || line.startsWith('#') || line.startsWith('//')) {
-      continue;
-    }
-
-    let parts = [];
-    if (line.includes('|')) {
-      parts = line.split('|').map(s => s.trim().replace(/^["']|["']$/g, ''));
-    } else if (line.includes('\t')) {
-      parts = line.split('\t').map(s => s.trim().replace(/^["']|["']$/g, ''));
-    } else if (line.includes(',')) {
-      // Split CSV respecting quotes
-      const matches = [];
-      let current = '';
-      let inQuotes = false;
-      for (let i = 0; i < line.length; i++) {
-        const c = line[i];
-        if (c === '"' || c === "'") {
-          inQuotes = !inQuotes;
-        } else if (c === ',' && !inQuotes) {
-          matches.push(current.trim().replace(/^["']|["']$/g, ''));
-          current = '';
-        } else {
-          current += c;
-        }
-      }
-      matches.push(current.trim().replace(/^["']|["']$/g, ''));
-      parts = matches;
-    } else {
-      continue;
-    }
-
-    // Skip header line
-    if (/serial|s\.?no|subject|due/i.test(parts[0]) || /name/i.test(parts[1])) {
-      continue;
-    }
-
-    if (parts.length >= 4) {
-      const sn = parseInt(parts[0], 10) || (rows.length + 1);
-      const name = parts[1] || `Schedule Item ${rows.length + 1}`;
-      const subject = parts[2] || 'General';
-      const due = normalizeDateString(parts[3] || '');
-
-      let rawTime = parts[4] || '';
-      let rawDuration = parts[5] || '';
-
-      const isTimeNull = !rawTime || rawTime.trim().toUpperCase() === 'NULL';
-      const isDurationNull = !rawDuration || rawDuration.trim().toUpperCase() === 'NULL';
-
-      let time = isTimeNull ? '' : normalizeTimeString(rawTime);
-      let duration = isDurationNull ? '--' : rawDuration;
-
-      rows.push({ sn, name, subject, due, time, duration });
-    }
-  }
-
-  return rows;
-}
-
 // Load Schedules from Google Sheets / schedules.txt / Storage / Fallback
 async function loadSchedulesData() {
   const isFileProtocol = window.location.protocol === 'file:';
@@ -354,7 +245,40 @@ async function loadSchedulesData() {
     console.warn('Could not read cached schedules', e);
   }
 
-  // 2. Try fetching from live Google Sheets CSV first
+  // 2. Load the latest schedules from the admin-backed API first.
+  // The API reads schedules.txt from the deployed branch, so admin edits
+  // become the source of truth after they are saved.
+  if (!isFileProtocol) {
+    try {
+      const response = await fetch('/api/deadlines?t=' + Date.now(), { cache: 'no-store' });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.version === 'browser-preview') {
+          const preview = localStorage.getItem(BROWSER_PREVIEW_KEY);
+          if (preview) data.items = JSON.parse(preview);
+        }
+        if (Array.isArray(data.items)) {
+          rawSchedules = data.items.map((item, index) => ({
+            sn: Number(item.sn) || index + 1,
+            name: String(item.name || ''),
+            subject: String(item.subject || 'General'),
+            due: normalizeDateString(item.due || ''),
+            time: item.time ? normalizeTimeString(item.time) : '',
+            duration: String(item.duration || '--')
+          }));
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(rawSchedules));
+          if (syncStatus) syncStatus.textContent = 'Schedule up to date';
+          if (syncStatusSub) syncStatusSub.textContent = 'Live schedule data';
+          processAndRender();
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Admin schedule API unavailable; trying the published sheet.', e);
+    }
+  }
+
+  // 3. Fall back to the published Google Sheet CSV
   if (GOOGLE_SHEETS_CSV_URL && !isFileProtocol) {
     try {
       const gResponse = await fetch(GOOGLE_SHEETS_CSV_URL + '&t=' + Date.now());
@@ -374,7 +298,7 @@ async function loadSchedulesData() {
     }
   }
 
-  // 3. Fallback: Fetch schedules.txt from repository folder
+  // 4. Fallback: Fetch schedules.txt from repository folder
   try {
     const response = await fetch('schedules.txt?t=' + Date.now());
     if (response.ok) {
