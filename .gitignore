@@ -1,6 +1,9 @@
 # Microsoft Office temporary lock files
 ~$*
 *.tmp
+.env
+.env.*
+!.env.example
 
 # OS files
 Thumbs.db
