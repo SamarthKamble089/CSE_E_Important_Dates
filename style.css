@@ -1748,12 +1748,6 @@ body {
   margin-top: 0.2rem;
 }
 
-.footer-actions {
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
-}
-
 /* ==========================================================================
    Responsive Adaptations
    ========================================================================== */
@@ -2173,34 +2167,34 @@ body {
 }
 
 /* ==========================================================================
-   Potions Card & Button
+   Portions Card
    ========================================================================== */
 
-.potions-icon {
+.portions-icon {
   background: rgba(168, 85, 247, 0.15);
   color: #a855f7;
   border: 1px solid rgba(168, 85, 247, 0.3);
   transition: all var(--transition-fast);
 }
 
-.stat-card-interactive:hover .potions-icon {
+.stat-card-interactive:hover .portions-icon {
   background: #a855f7;
   color: #ffffff;
   transform: scale(1.05);
 }
 
-.potions-card {
+.portions-card {
   border-color: rgba(168, 85, 247, 0.28) !important;
   text-decoration: none;
 }
 
-.potions-card:hover,
-.potions-card:focus-visible {
+.portions-card:hover,
+.portions-card:focus-visible {
   border-color: #a855f7 !important;
   box-shadow: 0 8px 24px rgba(168, 85, 247, 0.25) !important;
 }
 
-.potions-val {
+.portions-val {
   font-size: 1.25rem;
   font-weight: 700;
   color: var(--text-main);
@@ -2209,40 +2203,9 @@ body {
   gap: 0.35rem;
 }
 
-.potions-sub {
+.portions-sub {
   color: #a855f7;
   font-weight: 600;
-}
-
-.btn-potions {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.55rem 1rem;
-  border-radius: var(--radius-md);
-  font-size: 0.875rem;
-  font-weight: 600;
-  font-family: var(--font-sans);
-  cursor: pointer;
-  border: 1px solid rgba(168, 85, 247, 0.4);
-  background: rgba(168, 85, 247, 0.12);
-  color: #a855f7;
-  text-decoration: none;
-  transition: all var(--transition-fast);
-  white-space: nowrap;
-}
-
-.btn-potions:hover {
-  background: #a855f7;
-  color: #ffffff;
-  border-color: #a855f7;
-  box-shadow: 0 4px 16px rgba(168, 85, 247, 0.35);
-  transform: translateY(-1px);
-}
-
-.btn-potions .icon {
-  width: 16px;
-  height: 16px;
 }
 
 /* Timetable Lightbox Modal */

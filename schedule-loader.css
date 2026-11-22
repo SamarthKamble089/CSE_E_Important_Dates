@@ -1,0 +1,50 @@
+.schedule-loader {
+  display: none;
+  min-height: 15rem;
+  padding: 2rem 1rem;
+  place-content: center;
+  justify-items: center;
+  gap: 1rem;
+  color: var(--text-muted, #a6b1c7);
+  font-size: .9rem;
+  font-weight: 600;
+}
+
+[data-loading] .schedule-loader { display: grid; }
+[data-loading] :is([data-schedule-table], .empty-state, .empty, .results-count) { display: none !important; }
+
+.schedule-pixels {
+  display: grid;
+  grid-template-columns: repeat(6, 1rem);
+  gap: .3rem;
+  perspective: 320px;
+}
+
+.schedule-pixels span {
+  aspect-ratio: 1;
+  border-radius: 3px;
+  background: var(--primary, #6c8ff0);
+  opacity: .35;
+  animation: schedule-pixel-flip .9s ease-in-out infinite both;
+  animation-delay: calc(var(--pixel-delay) * 42ms);
+}
+
+@keyframes schedule-pixel-flip {
+  0%, 100% { transform: rotateX(0); opacity: .25; }
+  49% { transform: rotateX(180deg); opacity: .95; background: var(--cyan, #67e8f9); }
+}
+
+[data-schedule-panel]:not([data-loading]) [data-schedule-table] {
+  animation: schedule-reveal 220ms ease-out both;
+}
+
+@keyframes schedule-reveal {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .schedule-pixels span,
+  [data-schedule-panel]:not([data-loading]) [data-schedule-table] { animation: none; }
+}
+

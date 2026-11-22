@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Admin | CSE-E Important Dates</title>
+  <link rel="stylesheet" href="/admin/admin.css?v=3">
+  <link rel="stylesheet" href="/schedule-loader.css">
+</head>
+<body>
+  <main class="page">
+    <section class="panel login-panel" id="loginPanel">
+      <a class="back-link" href="/">← Public schedule</a>
+      <p class="eyebrow">CSE · SECTION E</p>
+      <h1>Admin sign in</h1>
+      <p class="muted">Sign in to manage important dates and deadlines.</p>
+      <form id="loginForm" class="stack">
+        <label>Username<input id="username" name="username" autocomplete="username" required></label>
+        <label>Password<input id="password" name="password" type="password" autocomplete="current-password" required></label>
+        <button class="primary" type="submit">Sign in</button>
+      </form>
+      <p class="message" id="loginMessage" role="status"></p>
+    </section>
+
+    <section class="admin-shell" id="adminShell" hidden>
+      <header class="page-header">
+        <div>
+          <a class="back-link" href="/">← Public schedule</a>
+          <p class="eyebrow">CSE · SECTION E</p>
+          <h1>Manage deadlines</h1>
+        </div>
+        <div class="list-actions">
+          <a class="secondary preview-button" href="/" target="_blank" rel="noopener">Preview</a>
+          <button class="secondary" id="logoutButton" type="button">Sign out</button>
+        </div>
+      </header>
+
+      <section class="panel list-panel" id="deadlinePanel" data-schedule-panel>
+        <div class="list-heading">
+          <div><h2>Current deadlines</h2><p class="muted" id="deadlineCount">Loading…</p></div>
+          <div class="list-actions">
+            <button class="primary" id="openAddDeadlineButton" type="button" disabled>Add deadline</button>
+            <button class="secondary delete-button" id="deleteExpiredButton" type="button" disabled>Delete all expired</button>
+            <button class="secondary icon-button" id="refreshButton" type="button" aria-label="Refresh deadlines" title="Refresh deadlines">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="schedule-loader" role="status">
+          <div class="schedule-pixels" aria-hidden="true"></div>
+          <span data-load-message>Loading deadlines</span>
+        </div>
+        <div class="table-scroll" data-schedule-table>
+          <table>
+            <thead><tr><th>Deadline</th><th>Subject</th><th>Due</th><th>Duration</th><th></th></tr></thead>
+            <tbody id="deadlineRows"></tbody>
+          </table>
+        </div>
+        <p class="empty" id="emptyMessage" hidden>No deadlines yet.</p>
+        <p class="message" id="saveMessage" role="status"></p>
+      </section>
+      <dialog id="addDialog" class="panel edit-dialog" aria-labelledby="addHeading">
+        <h2 id="addHeading">Add a deadline</h2>
+        <form id="deadlineForm" class="form-grid">
+          <div class="form-actions wide">
+            <button class="primary" id="saveDeadlineButton" type="submit">Add deadline</button>
+            <button class="secondary" id="cancelAddButton" type="button">Cancel</button>
+          </div>
+        </form>
+        <p class="message" id="addMessage" role="status"></p>
+      </dialog>
+      <dialog id="editDialog" class="panel edit-dialog" aria-labelledby="editHeading">
+        <h2 id="editHeading">Edit deadline</h2>
+        <form id="editForm" class="form-grid">
+          <div class="form-actions wide">
+            <button class="primary" id="confirmEditButton" type="submit">Save changes</button>
+            <button class="secondary" id="cancelEditButton" type="button">Cancel</button>
+          </div>
+        </form>
+        <p class="message" id="editMessage" role="status"></p>
+      </dialog>
+      <dialog id="deleteDialog" class="panel edit-dialog" aria-labelledby="deleteHeading" aria-describedby="deleteDescription">
+        <h2 id="deleteHeading">Confirm deletion</h2>
+        <p class="muted" id="deleteDescription"></p>
+        <form id="deleteForm" class="form-actions">
+          <button class="secondary" id="cancelDeleteButton" type="button" autofocus>Cancel</button>
+          <button class="danger" id="confirmDeleteButton" type="submit">Delete</button>
+        </form>
+        <p class="message" id="deleteMessage" role="status"></p>
+      </dialog>
+    </section>
+  </main>
+  <template id="deadlineFields">
+    <label class="wide">Deadline / event name<input name="title" maxlength="160" required placeholder="e.g. OS CIE 2"></label>
+    <label>Subject<input name="subject" maxlength="160" required placeholder="e.g. Operating Systems"></label>
+    <label>Duration<input name="duration" maxlength="160" placeholder="e.g. 1 hour"></label>
+    <fieldset>
+      <legend>Due date</legend>
+      <div class="date-fields">
+        <select name="day" aria-label="Day" required><option value="">Day</option></select>
+        <select name="month" aria-label="Month" required><option value="">Month</option></select>
+        <input name="year" aria-label="Year" inputmode="numeric" required pattern="[0-9]{4}" maxlength="4" placeholder="Year">
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Due time (IST)</legend>
+      <div class="time-fields">
+        <input name="clock" aria-label="Time in hours and minutes" inputmode="text" placeholder="e.g. 9:30" pattern="(0?[1-9]|1[0-2]):[0-5][0-9]" maxlength="5">
+        <select name="period" aria-label="AM or PM"><option>AM</option><option selected>PM</option></select>
+      </div>
+    </fieldset>
+  </template>
+  <script src="/schedule-data.js?v=2" defer></script>
+  <script src="/schedule-loader.js" defer></script>
+  <script src="/site-config.js" defer></script>
+  <script src="/admin/admin.js?v=5" defer></script>
+</body>
+</html>
