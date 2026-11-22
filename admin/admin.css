@@ -10,6 +10,7 @@
 .form-grid select{width:100%;min-width:0;padding:12px 8px;border:1px solid #34435e;border-radius:10px;background:#0b1222;color:#f3f6fc;font:inherit}
 .form-grid input,.form-grid select{min-width:0}
 .list-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
+.preview-button{display:inline-flex;align-items:center;padding:11px 15px;border-radius:10px;font-weight:700;text-decoration:none}
 .deadline-status{display:table;margin-top:5px;padding:2px 8px;border-radius:999px;background:#25324a;color:#dce5f6;font-size:.75rem;font-weight:700}
 .deadline-status[data-status="Upcoming"]{background:#14362d;color:#a7e9c3}
 .deadline-status[data-status="Overdue"]{background:#46341c;color:#ffda9a}

@@ -68,6 +68,10 @@ document.addEventListener('DOMContentLoaded', () => {
   loadSchedulesData();
 });
 
+window.addEventListener('storage', (event) => {
+  if (event.key === BROWSER_PREVIEW_KEY) loadSchedulesData();
+});
+
 // Theme Manager (Dark & Light Mode, default: Dark)
 function initTheme() {
   const darkBtn = document.getElementById('themeDarkBtn');
@@ -253,7 +257,8 @@ async function loadSchedulesData() {
       const response = await fetch('/api/deadlines?t=' + Date.now(), { cache: 'no-store' });
       if (response.ok) {
         const data = await response.json();
-        if (data.version === 'browser-preview') {
+        const preview = data.version === 'browser-preview';
+        if (preview) {
           data.items = readBrowserPreviewDeadlines() ?? data.items;
         }
         if (Array.isArray(data.items)) {
@@ -267,7 +272,7 @@ async function loadSchedulesData() {
           }));
           localStorage.setItem(STORAGE_KEY, JSON.stringify(rawSchedules));
           if (syncStatus) syncStatus.textContent = 'Schedule up to date';
-          if (syncStatusSub) syncStatusSub.textContent = 'Live schedule data';
+          if (syncStatusSub) syncStatusSub.textContent = preview ? 'Preview schedule' : 'Live schedule data';
           processAndRender();
           return;
         }

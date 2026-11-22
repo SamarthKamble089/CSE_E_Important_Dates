@@ -214,8 +214,7 @@ async function loadDeadlines() {
   version = data.version;
   render();
   saveDeadlineButton.disabled = false;
-  const notice = data.source === 'snapshot' && !stored ? ' Google Sheets is unavailable. Showing the deployed schedule.' : '';
-  showMessage(saveMessage, preview ? `Preview edits are saved in this browser.${notice}` : '');
+  showMessage(saveMessage, preview ? 'Save your changes, then open Preview to see them in this browser.' : '');
 }
 
 async function saveDeadlines(next, message = saveMessage) {

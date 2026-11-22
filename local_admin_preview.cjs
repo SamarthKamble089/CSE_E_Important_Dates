@@ -1,45 +1,17 @@
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
-const { createHash, randomBytes } = require('node:crypto');
-const { GOOGLE_SHEETS_CSV_URL } = require('./schedule-data');
+const { randomBytes } = require('node:crypto');
 
 process.env.NODE_ENV = 'development';
 process.env.CSEE_LOCAL_PREVIEW = '1';
 process.env.ADMIN_SESSION_SECRET = randomBytes(32).toString('hex');
-process.env.GITHUB_TOKEN = 'local-preview';
 
 const routes = new Map([
   ['/api/deadlines', require('./api/deadlines')],
   ['/api/admin/login', require('./api/admin/login')],
   ['/api/admin/logout', require('./api/admin/logout')]
 ]);
-
-const bundledSchedule = fs.readFileSync(path.join(__dirname, 'schedules.txt'));
-let schedule = bundledSchedule;
-const version = () => createHash('sha1').update(schedule).digest('hex');
-const fetchSheet = global.fetch;
-
-// Run the same handlers as Vercel, with an in-memory substitute for GitHub.
-global.fetch = async (url, options = {}) => {
-  if (new URL(url).hostname === 'api.github.com') {
-    if (options.method === 'PUT') {
-      const update = JSON.parse(options.body);
-      if (update.sha !== version()) return Response.json({}, { status: 409 });
-      schedule = Buffer.from(update.content, 'base64');
-      return Response.json({ content: { sha: version() } });
-    }
-    return Response.json({ content: schedule.toString('base64'), sha: version() });
-  }
-  if (url !== GOOGLE_SHEETS_CSV_URL) throw new Error('Unexpected preview request');
-  try {
-    const response = await fetchSheet(url, { signal: AbortSignal.timeout(5000) });
-    if (response.ok) return response;
-  } catch (error) {
-    console.warn('Could not load Google Sheets:', error.message);
-  }
-  return new Response(bundledSchedule);
-};
 
 const files = new Map([
   ['/', 'index.html'], ['/admin', 'admin/index.html'],

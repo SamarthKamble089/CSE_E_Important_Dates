@@ -30,7 +30,7 @@ Official academic schedule and important dates portal for **CSE - Section E**.
    - The `testing` preview and local launcher use the demo credentials `admin` / `admin`. The server stores a salted password hash in `api/_lib/preview-credentials.js`. The `testing` preview works without Vercel environment variables. Preview edits are saved in the current browser and appear on the public preview in that browser.
    - For shared deployments, set `ADMIN_PASSWORD_HASH` to the lowercase hex salt and scrypt hash separated by a colon. The salt is 16 random bytes and scrypt derives 64 bytes using Node.js defaults. Existing shared deployments can still use `ADMIN_PASSWORD` if they do not set `ADMIN_PASSWORD_HASH`.
    - Shared saves require a separately configured deployment with the credentials and GitHub token from `.env.example`. Shared saves commit to `schedules.txt` on `testing`.
-   - The editor starts with the published Google Sheet and falls back to the deployed `schedules.txt` if the sheet is unavailable. After the first save, the preview uses the schedule saved in the browser.
+   - The `testing` preview and local launcher start with `schedules.txt`. After the first save, they use the schedule saved in your browser. **Preview** opens the public schedule in a new tab and updates it when you save edits.
 
 ---
 

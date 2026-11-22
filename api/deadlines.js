@@ -87,17 +87,13 @@ async function readFile(token) {
 module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store, max-age=0');
   const token = process.env.GITHUB_TOKEN;
-  if (testingPreview) {
+  if (testingPreview || process.env.CSEE_LOCAL_PREVIEW === '1') {
     if (req.method !== 'GET') return res.status(405).json({ error: 'Preview edits are saved in your browser.' });
     try {
-      return res.status(200).json({ items: await readSheet(), version: 'browser-preview' });
+      const snapshot = await readBundledFile(path.join(__dirname, '..', 'schedules.txt'), 'utf8');
+      return res.status(200).json({ items: parseTxtContent(snapshot), version: 'browser-preview' });
     } catch {
-      try {
-        const snapshot = await readBundledFile(path.join(__dirname, '..', 'schedules.txt'), 'utf8');
-        return res.status(200).json({ items: parseTxtContent(snapshot), version: 'browser-preview', source: 'snapshot' });
-      } catch {
-        return res.status(502).json({ error: 'Could not load the Google Sheet or the deployed schedule.' });
-      }
+      return res.status(502).json({ error: 'Could not load the deployed schedule.' });
     }
   }
   if (!token) return res.status(503).json({ error: 'Schedule storage is not configured for this deployment.' });
