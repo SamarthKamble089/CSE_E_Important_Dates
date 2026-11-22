@@ -21,7 +21,7 @@ module.exports = async function handler(req, res) {
   const username = previewLogin ? 'admin' : process.env.ADMIN_USERNAME;
   const password = process.env.ADMIN_PASSWORD;
   if (!username || (!previewLogin && !password) || !sessionSecret()) {
-    return res.status(503).json({ error: 'Admin login is not configured in the deployment environment.' });
+    return res.status(503).json({ error: 'Admin login is not configured here. For preview access, open /admin on the testing deployment linked in the pull request.' });
   }
 
   let body;

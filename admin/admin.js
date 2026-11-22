@@ -2,6 +2,7 @@ const loginPanel = document.getElementById('loginPanel');
 const adminShell = document.getElementById('adminShell');
 const loginForm = document.getElementById('loginForm');
 const loginMessage = document.getElementById('loginMessage');
+const signInButton = loginForm.querySelector('button[type="submit"]');
 const deadlineForm = document.getElementById('deadlineForm');
 const saveMessage = document.getElementById('saveMessage');
 const deadlineRows = document.getElementById('deadlineRows');
@@ -12,6 +13,13 @@ const editForm = document.getElementById('editForm');
 const editMessage = document.getElementById('editMessage');
 const confirmEditButton = document.getElementById('confirmEditButton');
 const fieldTemplate = document.getElementById('deadlineFields');
+const deleteDialog = document.getElementById('deleteDialog');
+const deleteForm = document.getElementById('deleteForm');
+const deleteMessage = document.getElementById('deleteMessage');
+const confirmDeleteButton = document.getElementById('confirmDeleteButton');
+const cancelDeleteButton = document.getElementById('cancelDeleteButton');
+const deleteExpiredButton = document.getElementById('deleteExpiredButton');
+let pendingDeletion = [];
 
 for (const form of [deadlineForm, editForm]) {
   form.prepend(fieldTemplate.content.cloneNode(true));
@@ -29,6 +37,52 @@ let deadlines = [];
 let editingIndex = -1;
 let version = '';
 let saving = false;
+let idleTimer;
+let expiresAt = 0;
+let lastRenewal = 0;
+let renewal;
+let signingOut = false;
+
+function showSignIn(message) {
+  clearTimeout(idleTimer);
+  expiresAt = 0;
+  version = '';
+  if (editDialog.open) editDialog.close();
+  if (deleteDialog.open) deleteDialog.close();
+  adminShell.hidden = true;
+  loginPanel.hidden = false;
+  loginForm.reset();
+  showMessage(loginMessage, message);
+}
+
+function watchSession(expiry) {
+  expiresAt = expiry;
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => showSignIn('Signed out after 5 minutes of inactivity.'), Math.max(0, expiry - Date.now()));
+}
+
+function recordActivity(event) {
+  if (!event.isTrusted || adminShell.hidden || signingOut || renewal) return;
+  const now = Date.now();
+  if (now >= expiresAt) {
+    showSignIn('Your session expired. Please sign in again.');
+    return;
+  }
+  if (now - lastRenewal < 5000) return;
+  lastRenewal = now;
+  renewal = api('/api/admin/login', { method: 'PATCH', signal: AbortSignal.timeout(8000) })
+    .then(({ expiresAt }) => {
+      if (!adminShell.hidden && !signingOut) watchSession(expiresAt);
+    })
+    .catch((error) => {
+      if (error.status === 401 && !signingOut) showSignIn(error.message);
+    })
+    .finally(() => { renewal = undefined; });
+}
+
+for (const event of ['pointerdown', 'keydown', 'input', 'wheel']) {
+  document.addEventListener(event, recordActivity, { passive: true });
+}
 
 function showMessage(element, message, kind = '') {
   element.textContent = message;
@@ -43,7 +97,11 @@ async function api(url, options = {}) {
     credentials: 'same-origin'
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || `Request failed (${response.status}).`);
+  if (!response.ok) {
+    const error = new Error(data.error || `Request failed (${response.status}).`);
+    error.status = response.status;
+    throw error;
+  }
   return data;
 }
 
@@ -64,6 +122,33 @@ function displayTime(value) {
   return `${String(hour % 12 || 12).padStart(2, '0')}:${minute} ${hour >= 12 ? 'PM' : 'AM'}`;
 }
 
+function deadlineStatus(item, now) {
+  const calendarDate = new Date(`${item.due}T00:00:00Z`);
+  if (!Number.isFinite(calendarDate.getTime()) || calendarDate.toISOString().slice(0, 10) !== item.due) return 'Unknown';
+  if (item.time && !/^(?:(?:0?[1-9]|1[0-2]):[0-5]\d\s*(?:AM|PM)|(?:[01]?\d|2[0-3]):[0-5]\d)$/i.test(item.time)) return 'Unknown';
+  const time = item.time ? timeForInput(item.time) : '23:59';
+  const due = Date.parse(`${item.due}T${time}:00+05:30`);
+  if (!Number.isFinite(due)) return 'Unknown';
+  if (due >= now) return 'Upcoming';
+  return now - due > 86400000 ? 'Expired' : 'Overdue';
+}
+
+function updateDeadlineStatuses() {
+  const now = Date.now();
+  let expiredCount = 0;
+  deadlines.forEach((item, index) => {
+    const status = deadlineStatus(item, now);
+    const badge = deadlineRows.rows[index]?.querySelector('.deadline-status');
+    if (badge) {
+      badge.textContent = status;
+      badge.dataset.status = status;
+    }
+    if (status === 'Expired') expiredCount++;
+  });
+  deleteExpiredButton.disabled = !version || saving || expiredCount === 0;
+  deleteExpiredButton.textContent = expiredCount ? `Delete all expired (${expiredCount})` : 'Delete all expired';
+}
+
 function render() {
   deadlineRows.replaceChildren();
   deadlineCount.textContent = `${deadlines.length} deadline${deadlines.length === 1 ? '' : 's'}`;
@@ -72,9 +157,14 @@ function render() {
   deadlines.forEach((item, index) => {
     const row = document.createElement('tr');
     const values = [item.name, item.subject, `${item.due} · ${item.time ? displayTime(timeForInput(item.time)) : '--'}`, item.duration];
-    values.forEach((value) => {
+    values.forEach((value, column) => {
       const cell = document.createElement('td');
       cell.textContent = value;
+      if (column === 2) {
+        const badge = document.createElement('span');
+        badge.className = 'deadline-status';
+        cell.appendChild(badge);
+      }
       row.appendChild(cell);
     });
 
@@ -89,16 +179,18 @@ function render() {
     deleteButton.type = 'button';
     deleteButton.className = 'secondary delete-button';
     deleteButton.textContent = 'Delete';
-    deleteButton.addEventListener('click', () => removeDeadline(index));
+    deleteButton.addEventListener('click', () => confirmDeletion([item]));
     actions.append(editButton, deleteButton);
     row.appendChild(actions);
     deadlineRows.appendChild(row);
   });
+  updateDeadlineStatuses();
 }
 
 async function loadDeadlines() {
   showMessage(saveMessage, 'Loading deadlines…');
   version = '';
+  deleteExpiredButton.disabled = true;
   saveDeadlineButton.disabled = true;
   const data = await api('/api/deadlines');
   version = data.version;
@@ -120,6 +212,7 @@ async function loadDeadlines() {
 async function saveDeadlines(next, message = saveMessage) {
   if (!version || saving) return false;
   saving = true;
+  deleteExpiredButton.disabled = true;
   confirmEditButton.disabled = true;
   cancelEditButton.disabled = true;
   saveDeadlineButton.disabled = true;
@@ -144,6 +237,7 @@ async function saveDeadlines(next, message = saveMessage) {
     return false;
   } finally {
     saving = false;
+    updateDeadlineStatuses();
     confirmEditButton.disabled = false;
     cancelEditButton.disabled = false;
     saveDeadlineButton.disabled = false;
@@ -193,29 +287,72 @@ function startEdit(index) {
   editDialog.showModal();
 }
 
-async function removeDeadline(index) {
-  if (!version || saving) return;
-  if (!window.confirm(`Delete "${deadlines[index].name}"?`)) return;
-  const next = deadlines.filter((_, current) => current !== index);
-  await saveDeadlines(next);
+function confirmDeletion(items, bulk = false) {
+  if (!version || saving || !items.length) return;
+  pendingDeletion = items;
+  const label = items.length === 1 ? 'deadline' : 'deadlines';
+  document.getElementById('deleteDescription').textContent = bulk
+    ? `Delete ${items.length} expired ${label}? This only includes deadlines that passed more than 24 hours ago.`
+    : `Delete "${items[0].name}"?`;
+  confirmDeleteButton.textContent = bulk ? `Delete ${items.length} ${label}` : 'Delete deadline';
+  showMessage(deleteMessage, '');
+  deleteDialog.showModal();
 }
+
+deleteExpiredButton.addEventListener('click', () => {
+  const now = Date.now();
+  confirmDeletion(deadlines.filter((item) => deadlineStatus(item, now) === 'Expired'), true);
+});
+cancelDeleteButton.addEventListener('click', () => deleteDialog.close());
+deleteDialog.addEventListener('cancel', (event) => {
+  if (saving) event.preventDefault();
+});
+deleteForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (!version || saving || !pendingDeletion.length) return;
+  const selected = new Set(pendingDeletion);
+  const next = deadlines.filter((item) => !selected.has(item));
+  const count = deadlines.length - next.length;
+  if (!count) return;
+  confirmDeleteButton.disabled = true;
+  cancelDeleteButton.disabled = true;
+  try {
+    if (await saveDeadlines(next, deleteMessage)) {
+      deleteDialog.close();
+      showMessage(saveMessage, `Deleted ${count} ${count === 1 ? 'deadline' : 'deadlines'}.`, 'success');
+      document.getElementById('refreshButton').focus();
+    }
+  } finally {
+    confirmDeleteButton.disabled = false;
+    cancelDeleteButton.disabled = false;
+  }
+});
+setInterval(() => {
+  if (!adminShell.hidden) updateDeadlineStatuses();
+}, 30000);
 
 loginForm.addEventListener('submit', async (event) => {
   event.preventDefault();
+  if (signInButton.disabled) return;
+  signInButton.disabled = true;
   showMessage(loginMessage, 'Signing in…');
   try {
-    await api('/api/admin/login', {
+    const session = await api('/api/admin/login', {
       method: 'POST',
       body: JSON.stringify({
-        username: document.getElementById('username').value,
+        username: document.getElementById('username').value.trim(),
         password: document.getElementById('password').value
       })
     });
     loginPanel.hidden = true;
     adminShell.hidden = false;
+    lastRenewal = Date.now();
+    watchSession(session.expiresAt);
     await loadDeadlines().catch((error) => showMessage(saveMessage, error.message, 'error'));
   } catch (error) {
     showMessage(loginMessage, error.message, 'error');
+  } finally {
+    signInButton.disabled = false;
   }
 });
 
@@ -257,25 +394,25 @@ document.getElementById('refreshButton').addEventListener('click', async () => {
   }
 });
 document.getElementById('logoutButton').addEventListener('click', async () => {
-  if (saving) return;
+  if (saving || signingOut) return;
+  signingOut = true;
   try {
+    await renewal;
     await api('/api/admin/logout', { method: 'POST', body: '{}' });
+    showSignIn('Signed out.');
   } catch (error) {
     showMessage(saveMessage, error.message, 'error');
-    return;
+  } finally {
+    signingOut = false;
   }
-  version = '';
-  adminShell.hidden = true;
-  loginPanel.hidden = false;
-  loginForm.reset();
-  showMessage(loginMessage, 'Signed out.');
 });
 
 resetAddForm();
 
-api('/api/admin/login').then(({ authenticated }) => {
-  if (!authenticated) return;
+api('/api/admin/login').then(({ authenticated, expiresAt }) => {
+  if (!authenticated || !adminShell.hidden) return;
   loginPanel.hidden = true;
   adminShell.hidden = false;
+  watchSession(expiresAt);
   return loadDeadlines().catch((error) => showMessage(saveMessage, error.message, 'error'));
 }).catch((error) => showMessage(loginMessage, error.message, 'error'));

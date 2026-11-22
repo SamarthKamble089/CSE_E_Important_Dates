@@ -46,7 +46,10 @@
       <section class="panel list-panel">
         <div class="list-heading">
           <div><h2>Current deadlines</h2><p class="muted" id="deadlineCount">Loading…</p></div>
-          <button class="secondary" id="refreshButton" type="button">Refresh</button>
+          <div class="list-actions">
+            <button class="secondary delete-button" id="deleteExpiredButton" type="button" disabled>Delete all expired</button>
+            <button class="secondary" id="refreshButton" type="button">Refresh</button>
+          </div>
         </div>
         <div class="table-scroll">
           <table>
@@ -65,6 +68,15 @@
           </div>
         </form>
         <p class="message" id="editMessage" role="status"></p>
+      </dialog>
+      <dialog id="deleteDialog" class="panel edit-dialog" aria-labelledby="deleteHeading" aria-describedby="deleteDescription">
+        <h2 id="deleteHeading">Confirm deletion</h2>
+        <p class="muted" id="deleteDescription"></p>
+        <form id="deleteForm" class="form-actions">
+          <button class="secondary" id="cancelDeleteButton" type="button" autofocus>Cancel</button>
+          <button class="danger" id="confirmDeleteButton" type="submit">Delete</button>
+        </form>
+        <p class="message" id="deleteMessage" role="status"></p>
       </dialog>
     </section>
   </main>
