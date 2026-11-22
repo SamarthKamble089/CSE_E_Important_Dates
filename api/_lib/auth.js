@@ -1,12 +1,11 @@
 const crypto = require('crypto');
+const { sessionKey: previewSessionKey } = require('./preview-credentials');
 
 const COOKIE_NAME = 'csee_admin_session';
 const SESSION_SECONDS = 5 * 60;
 
 const testingPreview = process.env.VERCEL_ENV === 'preview' && process.env.VERCEL_GIT_COMMIT_REF === 'testing';
-const sessionSecret = () => testingPreview
-  ? 'csee-testing-browser-preview-v2'
-  : process.env.ADMIN_SESSION_SECRET;
+const sessionSecret = () => process.env.ADMIN_SESSION_SECRET || (testingPreview ? previewSessionKey : undefined);
 
 function safeEqual(a, b) {
   const left = Buffer.from(String(a));

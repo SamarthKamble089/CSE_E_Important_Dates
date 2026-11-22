@@ -1,3 +1,5 @@
+const { readFile: readBundledFile } = require('node:fs/promises');
+const path = require('node:path');
 const { GOOGLE_SHEETS_CSV_URL, parseTxtContent } = require('../schedule-data');
 const { requireAdmin, testingPreview } = require('./_lib/auth');
 
@@ -63,8 +65,10 @@ function githubHeaders(token) {
 }
 
 async function readSheet() {
-  const sheet = await fetch(GOOGLE_SHEETS_CSV_URL, { cache: 'no-store' });
-  if (!sheet.ok) throw new Error('Could not load the published Google Sheet.');
+  const sheet = await fetch(GOOGLE_SHEETS_CSV_URL, { cache: 'no-store', signal: AbortSignal.timeout(5000) });
+  if (!sheet.ok || sheet.headers.get('content-type')?.includes('text/html')) {
+    throw new Error('Could not load the published Google Sheet.');
+  }
   return parseTxtContent(await sheet.text());
 }
 
@@ -87,8 +91,13 @@ module.exports = async function handler(req, res) {
     if (req.method !== 'GET') return res.status(405).json({ error: 'Preview edits are saved in your browser.' });
     try {
       return res.status(200).json({ items: await readSheet(), version: 'browser-preview' });
-    } catch (error) {
-      return res.status(502).json({ error: error.message });
+    } catch {
+      try {
+        const snapshot = await readBundledFile(path.join(__dirname, '..', 'schedules.txt'), 'utf8');
+        return res.status(200).json({ items: parseTxtContent(snapshot), version: 'browser-preview', source: 'snapshot' });
+      } catch {
+        return res.status(502).json({ error: 'Could not load the Google Sheet or the deployed schedule.' });
+      }
     }
   }
   if (!token) return res.status(503).json({ error: 'Schedule storage is not configured for this deployment.' });

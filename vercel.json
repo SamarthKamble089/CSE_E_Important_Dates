@@ -1,4 +1,7 @@
 {
+  "functions": {
+    "api/deadlines.js": { "includeFiles": "schedules.txt" }
+  },
   "rewrites": [
     { "source": "/admin", "destination": "/admin/index.html" }
   ]

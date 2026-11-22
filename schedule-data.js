@@ -114,3 +114,12 @@ function parseTxtContent(text) {
 
 if (typeof module !== 'undefined') module.exports = { GOOGLE_SHEETS_CSV_URL, parseTxtContent };
 const BROWSER_PREVIEW_KEY = 'csee-testing-preview-deadlines';
+
+function readBrowserPreviewDeadlines() {
+  try {
+    const items = JSON.parse(localStorage.getItem(BROWSER_PREVIEW_KEY));
+    return Array.isArray(items) && items.every(item => item && typeof item === 'object') ? items : null;
+  } catch {
+    return null;
+  }
+}

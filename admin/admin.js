@@ -192,21 +192,30 @@ async function loadDeadlines() {
   version = '';
   deleteExpiredButton.disabled = true;
   saveDeadlineButton.disabled = true;
-  const data = await api('/api/deadlines');
-  version = data.version;
-  const stored = version === 'browser-preview' ? localStorage.getItem(BROWSER_PREVIEW_KEY) : null;
-  const items = stored ? JSON.parse(stored) : data.items;
-  deadlines = Array.isArray(items) ? items.map((item, index) => ({
+  const data = await api('/api/deadlines').catch((error) => {
+    deadlineCount.textContent = 'Schedule unavailable';
+    throw error;
+  });
+  if (adminShell.hidden) return;
+  if (typeof data.version !== 'string' || !data.version || !Array.isArray(data.items)) {
+    deadlineCount.textContent = 'Schedule unavailable';
+    throw new Error('The schedule server returned invalid data. Try Refresh.');
+  }
+  const preview = data.version === 'browser-preview';
+  const stored = preview ? readBrowserPreviewDeadlines() : null;
+  deadlines = (stored ?? data.items).map((item, index) => ({
     sn: Number(item.sn) || index + 1,
     name: item.name || '',
     subject: item.subject || '',
-    due: item.due || '',
+    due: String(item.due || ''),
     time: item.time || '',
     duration: item.duration || ''
-  })) : [];
+  }));
+  version = data.version;
   render();
   saveDeadlineButton.disabled = false;
-  showMessage(saveMessage, version === 'browser-preview' ? 'Preview edits are saved in this browser.' : '');
+  const notice = data.source === 'snapshot' && !stored ? ' Google Sheets is unavailable. Showing the deployed schedule.' : '';
+  showMessage(saveMessage, preview ? `Preview edits are saved in this browser.${notice}` : '');
 }
 
 async function saveDeadlines(next, message = saveMessage) {
@@ -220,7 +229,11 @@ async function saveDeadlines(next, message = saveMessage) {
   try {
     const normalized = next.map((item, index) => ({ ...item, sn: index + 1 }));
     if (version === 'browser-preview') {
-      localStorage.setItem(BROWSER_PREVIEW_KEY, JSON.stringify(normalized));
+      try {
+        localStorage.setItem(BROWSER_PREVIEW_KEY, JSON.stringify(normalized));
+      } catch {
+        throw new Error('This browser could not save preview edits. Check that site storage is enabled.');
+      }
     } else {
       const result = await api('/api/deadlines', {
         method: 'PUT',

@@ -1,9 +1,8 @@
 const { scrypt } = require('node:crypto');
 const { promisify } = require('node:util');
-const { renewSession, sessionExpiry, safeEqual, testingPreview, sessionSecret } = require('../_lib/auth');
+const { renewSession, sessionExpiry, safeEqual, sessionSecret, testingPreview } = require('../_lib/auth');
+const previewCredentials = require('../_lib/preview-credentials');
 const derivePasswordHash = promisify(scrypt);
-const previewSalt = '7854465de7d9b7a68a90637e7e986322';
-const previewPasswordHash = '7cfb70a11b8a94bb7ca7dfc5b46110f1313aa340e700987d43411792a4b1c491351657dc4c10d0a4e77711879e0aa29d8e74b687bc6b7b1dca9a44f7c63b58a5';
 
 module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -17,11 +16,13 @@ module.exports = async function handler(req, res) {
   }
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed.' });
 
-  const previewLogin = testingPreview || process.env.CSEE_LOCAL_PREVIEW === '1';
-  const username = previewLogin ? 'admin' : process.env.ADMIN_USERNAME;
+  const usePreviewCredentials = testingPreview || process.env.CSEE_LOCAL_PREVIEW === '1';
+  const username = usePreviewCredentials ? previewCredentials.username : process.env.ADMIN_USERNAME;
+  const hashSetting = usePreviewCredentials ? previewCredentials.passwordHash : process.env.ADMIN_PASSWORD_HASH;
+  const hash = hashSetting?.match(/^([0-9a-f]{32}):([0-9a-f]{128})$/);
   const password = process.env.ADMIN_PASSWORD;
-  if (!username || (!previewLogin && !password) || !sessionSecret()) {
-    return res.status(503).json({ error: 'Admin login is not configured here. For preview access, open /admin on the testing deployment linked in the pull request.' });
+  if (!username || !(hashSetting ? hash : password) || !sessionSecret()) {
+    return res.status(503).json({ error: 'Admin sign-in settings are missing or invalid on this deployment.' });
   }
 
   let body;
@@ -33,9 +34,10 @@ module.exports = async function handler(req, res) {
   const suppliedPassword = body?.password;
   let passwordMatches = false;
   if (typeof suppliedPassword === 'string' && suppliedPassword.length <= 256) {
-    if (previewLogin) {
-      const hash = await derivePasswordHash(suppliedPassword, previewSalt, 64);
-      passwordMatches = safeEqual(hash.toString('hex'), previewPasswordHash);
+    if (hash) {
+      const [, salt, expected] = hash;
+      const derived = await derivePasswordHash(suppliedPassword, Buffer.from(salt, 'hex'), 64);
+      passwordMatches = safeEqual(derived.toString('hex'), expected);
     } else {
       passwordMatches = safeEqual(suppliedPassword, password);
     }

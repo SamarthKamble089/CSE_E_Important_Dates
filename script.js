@@ -254,8 +254,7 @@ async function loadSchedulesData() {
       if (response.ok) {
         const data = await response.json();
         if (data.version === 'browser-preview') {
-          const preview = localStorage.getItem(BROWSER_PREVIEW_KEY);
-          if (preview) data.items = JSON.parse(preview);
+          data.items = readBrowserPreviewDeadlines() ?? data.items;
         }
         if (Array.isArray(data.items)) {
           rawSchedules = data.items.map((item, index) => ({

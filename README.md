@@ -27,9 +27,10 @@ Official academic schedule and important dates portal for **CSE - Section E**.
 
 3. **Admin deadline editor (`/admin`)**:
    - Open `/admin` directly on the Vercel preview for `testing`. The public homepage has no admin link.
-   - On the `testing` preview, sign in as `admin` with the preview password. The server stores a salted scrypt hash. No custom environment variables are required. Edits are saved in the current browser and appear on the public preview in that browser.
+   - The `testing` preview and local launcher use the demo credentials `admin` / `admin`. The server stores a salted password hash in `api/_lib/preview-credentials.js`. The `testing` preview works without Vercel environment variables. Preview edits are saved in the current browser and appear on the public preview in that browser.
+   - For shared deployments, set `ADMIN_PASSWORD_HASH` to the lowercase hex salt and scrypt hash separated by a colon. The salt is 16 random bytes and scrypt derives 64 bytes using Node.js defaults. Existing shared deployments can still use `ADMIN_PASSWORD` if they do not set `ADMIN_PASSWORD_HASH`.
    - Shared saves require a separately configured deployment with the credentials and GitHub token from `.env.example`. Shared saves commit to `schedules.txt` on `testing`.
-   - The editor starts with the published Google Sheet. After the first save, the preview uses the saved schedule. Further edits to the sheet do not sync to the preview.
+   - The editor starts with the published Google Sheet and falls back to the deployed `schedules.txt` if the sheet is unavailable. After the first save, the preview uses the schedule saved in the browser.
 
 ---
 
