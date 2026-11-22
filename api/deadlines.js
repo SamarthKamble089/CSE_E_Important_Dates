@@ -1,7 +1,9 @@
 const { readFile: readBundledFile } = require('node:fs/promises');
+const { randomUUID } = require('node:crypto');
 const path = require('node:path');
 const { GOOGLE_SHEETS_CSV_URL, parseTxtContent } = require('../schedule-data');
-const { requireAdmin, testingPreview } = require('./_lib/auth');
+const { readSession, demoMode } = require('./_lib/auth');
+const { sharedSchedule, readSharedSchedule, writeSharedSchedule } = require('./_lib/shared-schedule');
 
 const OWNER = process.env.GITHUB_OWNER || 'SamarthKamble089';
 const REPOSITORY = process.env.GITHUB_REPOSITORY || 'CSE_E_Important_Dates';
@@ -25,19 +27,6 @@ function parseScheduleText(text) {
       duration: parts[5] || '--'
     }];
   });
-}
-
-function serialize(items) {
-  const lines = [
-    '# CSE - Section E Important Dates & Schedules',
-    '# Format: Serial Number | Name | Subject | Due Date | Due Time | Duration',
-    MANAGED_MARKER,
-    ''
-  ];
-  for (const item of items) {
-    lines.push([item.sn, item.name, item.subject, item.due, item.time || '', item.duration || '--'].join(' | '));
-  }
-  return `${lines.join('\n')}\n`;
 }
 
 function validateItems(items) {
@@ -87,28 +76,32 @@ async function readFile(token) {
 module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store, max-age=0');
   const token = process.env.GITHUB_TOKEN;
-  if (testingPreview || process.env.CSEE_LOCAL_PREVIEW === '1') {
-    if (req.method !== 'GET') return res.status(405).json({ error: 'Preview edits are saved in your browser.' });
-    try {
-      const snapshot = await readBundledFile(path.join(__dirname, '..', 'schedules.txt'), 'utf8');
-      return res.status(200).json({ items: parseTxtContent(snapshot), version: 'browser-preview' });
-    } catch {
-      return res.status(502).json({ error: 'Could not load the deployed schedule.' });
-    }
-  }
-  if (!token) return res.status(503).json({ error: 'Schedule storage is not configured for this deployment.' });
-
   if (req.method === 'GET') {
     try {
+      if (sharedSchedule) {
+        const [version, items] = await readSharedSchedule();
+        if (version) return res.status(200).json({ items: JSON.parse(items), version, shared: true });
+      }
+      if (sharedSchedule || demoMode) {
+        const snapshot = await readBundledFile(path.join(__dirname, '..', 'schedules.txt'), 'utf8');
+        return res.status(200).json({
+          items: parseTxtContent(snapshot),
+          version: sharedSchedule ? 'initial' : 'browser-preview',
+          shared: sharedSchedule
+        });
+      }
+      if (!token) return res.status(503).json({ error: 'Schedule storage is not configured for this deployment.' });
       const { items, sha } = await readFile(token);
       return res.status(200).json({ items, version: sha });
-    } catch (error) {
-      return res.status(502).json({ error: error.message });
+    } catch {
+      return res.status(502).json({ error: 'Could not load the schedule.', shared: sharedSchedule });
     }
   }
 
   if (req.method !== 'PUT') return res.status(405).json({ error: 'Method not allowed.' });
-  if (!requireAdmin(req, res)) return;
+  if (!sharedSchedule) return res.status(405).json({ error: 'Shared editing is not configured.' });
+  const session = readSession(req);
+  if (!session) return res.status(401).json({ error: 'Your session expired. Please sign in again.' });
 
   let body;
   try {
@@ -117,31 +110,28 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: 'Invalid schedule request.' });
   }
   const items = body?.items;
-  if (!/^[a-f0-9]{40}$/.test(body?.version || '')) {
+  if (typeof body?.version !== 'string' || !/^(initial|[a-f0-9-]{36})$/.test(body.version)) {
     return res.status(400).json({ error: 'Refresh the schedule before saving.' });
   }
   const validationError = validateItems(items);
   if (validationError) return res.status(400).json({ error: validationError });
+  const sanitized = items.map((item, index) => ({
+    sn: index + 1,
+    name: String(item.name).trim(),
+    subject: String(item.subject).trim(),
+    due: String(item.due),
+    time: String(item.time ?? '').trim(),
+    duration: String(item.duration ?? '').trim()
+  }));
 
   try {
-    const url = `https://api.github.com/repos/${OWNER}/${REPOSITORY}/contents/${FILE_PATH}`;
-    const response = await fetch(url, {
-      method: 'PUT',
-      headers: githubHeaders(token),
-      body: JSON.stringify({
-        message: 'Update important dates from admin',
-        content: Buffer.from(serialize(items), 'utf8').toString('base64'),
-        sha: body.version,
-        branch: BRANCH
-      })
-    });
-    const result = await response.json();
-    if (response.status === 409 || response.status === 422) {
-      return res.status(409).json({ error: 'The schedule changed in GitHub. Reload the page and try again.' });
-    }
-    if (!response.ok) return res.status(502).json({ error: result.message || 'GitHub could not save the schedule.' });
-    return res.status(200).json({ version: result.content.sha });
-  } catch (error) {
-    return res.status(502).json({ error: error.message });
+    const version = randomUUID();
+    const result = await writeSharedSchedule(session.id, body.version, version, sanitized);
+    if (result === 'expired') return res.status(401).json({ error: 'Your editing session expired. Please sign in again.' });
+    if (result === 'conflict') return res.status(409).json({ error: 'The schedule changed. Refresh the editor before saving again.' });
+    if (result !== 'saved') throw new Error('Unexpected storage response.');
+    return res.status(200).json({ version });
+  } catch {
+    return res.status(502).json({ error: 'Could not save the shared schedule. Try refreshing before retrying.' });
   }
 };

@@ -5,7 +5,7 @@
  * 
  * Auto-filtering & Ordering Rules:
  * 1. Compares each entry's due date & time against the current date & time.
- * 2. Hides all data that is older than 1 day (overdue by > 24 hours).
+ * 2. Lists expired entries last, with an option to hide them.
  * 3. Any item whose due time has passed within that 1-day window (0 to 24h ago) is listed at the END.
  * 4. Active data is arranged chronologically by Due Date and Time (nearest first).
  */
@@ -29,7 +29,9 @@ let processedSchedules = [];
 let searchQuery = '';
 let selectedSubject = 'all';
 let currentSort = 'datetime-asc';
-let showHiddenPast = false;
+let showHiddenPast = true;
+let sharedScheduleActive = false;
+let newestScheduleRequest = 0;
 
 // DOM Elements
 const schedulesTableBody = document.getElementById('schedulesTableBody');
@@ -40,8 +42,6 @@ const subjectFilter = document.getElementById('subjectFilter');
 const sortSelect = document.getElementById('sortSelect');
 const refreshBtn = document.getElementById('refreshBtn');
 const tableCard = document.getElementById('tableCard');
-const scheduleTableRegion = document.getElementById('scheduleTableRegion');
-const scheduleLoadStatus = document.getElementById('scheduleLoadStatus');
 const resultsCount = document.getElementById('resultsCount');
 const resetFiltersBtn = document.getElementById('resetFiltersBtn');
 const fileProtocolBanner = document.getElementById('fileProtocolBanner');
@@ -68,35 +68,19 @@ document.addEventListener('DOMContentLoaded', () => {
   startClock();
   setupEventListeners();
   setupTimetableModal();
-  const pixels = document.querySelector('.schedule-pixels');
-  for (let index = 0; index < 18; index++) {
-    const tile = document.createElement('span');
-    tile.style.setProperty('--pixel-delay', index % 6 + Math.floor(index / 6));
-    pixels.append(tile);
-  }
   loadScheduleWithFeedback('Loading schedule');
 });
 
 window.addEventListener('storage', (event) => {
-  if (event.key === BROWSER_PREVIEW_KEY) loadSchedulesData();
+  if (event.key === BROWSER_PREVIEW_KEY || event.key === SHARED_SCHEDULE_UPDATE_KEY) loadSchedulesData();
 });
 
-async function loadScheduleWithFeedback(message) {
-  refreshBtn.disabled = true;
-  tableCard.setAttribute('data-loading', '');
-  scheduleTableRegion.setAttribute('aria-busy', 'true');
-  scheduleLoadStatus.textContent = message;
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  try {
-    await Promise.all([
-      loadSchedulesData(),
-      new Promise(resolve => setTimeout(resolve, reducedMotion ? 0 : 520))
-    ]);
-  } finally {
-    tableCard.removeAttribute('data-loading');
-    scheduleTableRegion.setAttribute('aria-busy', 'false');
-    refreshBtn.disabled = false;
-  }
+setInterval(() => {
+  if (sharedScheduleActive && !document.hidden && !refreshBtn.disabled) loadSchedulesData();
+}, 30000);
+
+function loadScheduleWithFeedback(message) {
+  return showScheduleLoading(tableCard, refreshBtn, message, loadSchedulesData);
 }
 
 // Theme Manager (Dark & Light Mode, default: Dark)
@@ -254,15 +238,14 @@ function getEventDateTime(dateStr, timeStr) {
     }
   }
 
-  const d = new Date(dateStr + 'T00:00:00');
-  if (isNaN(d.getTime())) return null;
-
-  d.setHours(hours, minutes, 0, 0);
-  return d;
+  const clock = [hours, minutes].map(value => String(value).padStart(2, '0')).join(':');
+  const date = new Date(`${dateStr}T${clock}:00+05:30`);
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 // Load Schedules from Google Sheets / schedules.txt / Storage / Fallback
 async function loadSchedulesData() {
+  const request = ++newestScheduleRequest;
   const isFileProtocol = window.location.protocol === 'file:';
 
   // 1. Check if cached in localStorage
@@ -282,8 +265,10 @@ async function loadSchedulesData() {
   if (!isFileProtocol) {
     try {
       const response = await fetch('/api/deadlines?t=' + Date.now(), { cache: 'no-store' });
+      const data = await response.json();
+      if (request !== newestScheduleRequest) return;
+      sharedScheduleActive ||= data.shared === true;
       if (response.ok) {
-        const data = await response.json();
         const preview = data.version === 'browser-preview';
         if (preview) {
           data.items = readBrowserPreviewDeadlines() ?? data.items;
@@ -297,7 +282,7 @@ async function loadSchedulesData() {
             time: item.time ? normalizeTimeString(item.time) : '',
             duration: String(item.duration || '--')
           }));
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(rawSchedules));
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(rawSchedules)); } catch {}
           if (syncStatus) syncStatus.textContent = 'Schedule up to date';
           if (syncStatusSub) syncStatusSub.textContent = preview ? 'Preview schedule' : 'Live schedule data';
           processAndRender();
@@ -305,7 +290,14 @@ async function loadSchedulesData() {
         }
       }
     } catch (e) {
-      console.warn('Admin schedule API unavailable; trying the published sheet.', e);
+      console.warn('Schedule API unavailable.', e);
+    }
+    if (request !== newestScheduleRequest) return;
+    if (sharedScheduleActive) {
+      if (syncStatus) syncStatus.textContent = 'Could not refresh schedule';
+      if (!rawSchedules.length && Array.isArray(cachedData)) rawSchedules = cachedData;
+      processAndRender();
+      return;
     }
   }
 
@@ -369,16 +361,18 @@ function formatDisplayDate(dateStr, timeStr) {
   }
 
   const formatted = target.toLocaleDateString('en-US', {
+    timeZone: 'Asia/Kolkata',
     month: 'short',
     day: 'numeric',
     year: 'numeric'
   });
 
   const monthDay = target.toLocaleDateString('en-US', {
+    timeZone: 'Asia/Kolkata',
     month: 'short',
     day: 'numeric'
   });
-  const yearStr = String(target.getFullYear());
+  const yearStr = target.toLocaleDateString('en-US', { year: 'numeric', timeZone: 'Asia/Kolkata' });
 
   const now = new Date();
   const diffMs = target.getTime() - now.getTime();
@@ -405,7 +399,7 @@ function formatDisplayDate(dateStr, timeStr) {
   } else {
     if (diffHours <= 3) {
       countdown = { text: `In ${Math.max(1, Math.round(diffHours))}h!`, cls: 'urgent' };
-    } else if (diffDays <= 0 || (diffHours <= 18 && target.getDate() === now.getDate())) {
+    } else if (target.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) === now.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })) {
       countdown = { text: 'Today!', cls: 'urgent' };
     } else if (diffDays === 1) {
       countdown = { text: 'Tomorrow', cls: 'urgent' };
@@ -480,7 +474,7 @@ function updateStats() {
     if (upcomingItems.length > 0) {
       const nearest = upcomingItems[0];
       const parsed = nearest.dt;
-      statDueSoon.textContent = parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      statDueSoon.textContent = parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'Asia/Kolkata' });
     } else {
       statDueSoon.textContent = 'None';
     }
@@ -711,7 +705,7 @@ function setupEventListeners() {
       searchQuery = '';
       selectedSubject = 'all';
       currentSort = 'datetime-asc';
-      showHiddenPast = false;
+      showHiddenPast = true;
       if (searchInput) searchInput.value = '';
       if (clearSearchBtn) clearSearchBtn.style.display = 'none';
       if (subjectFilter) subjectFilter.value = 'all';

@@ -114,6 +114,7 @@ function parseTxtContent(text) {
 
 if (typeof module !== 'undefined') module.exports = { GOOGLE_SHEETS_CSV_URL, parseTxtContent };
 const BROWSER_PREVIEW_KEY = 'csee-testing-preview-deadlines';
+const SHARED_SCHEDULE_UPDATE_KEY = 'csee-shared-schedule-version';
 
 function readBrowserPreviewDeadlines() {
   try {

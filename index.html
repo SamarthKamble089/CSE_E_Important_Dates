@@ -8,7 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=6">
+  <link rel="stylesheet" href="schedule-loader.css">
   <script>
     (function() {
       try {
@@ -203,7 +204,7 @@
       </div>
 
       <!-- Schedules Table Container -->
-      <div class="table-container-card scale-compact" id="tableCard" data-loading>
+      <div class="table-container-card scale-compact" id="tableCard" data-schedule-panel data-loading>
         <div class="table-header-meta">
           <div class="table-title-wrap">
             <h2 class="section-title">Academic Schedule Sheet</h2>
@@ -237,9 +238,9 @@
 
         <div class="schedule-loader" role="status">
           <div class="schedule-pixels" aria-hidden="true"></div>
-          <span id="scheduleLoadStatus">Loading schedule</span>
+          <span data-load-message>Loading schedule</span>
         </div>
-        <div class="table-responsive" id="scheduleTableRegion" aria-busy="true">
+        <div class="table-responsive" data-schedule-table aria-busy="true">
           <table class="schedules-table" id="schedulesTable">
             <thead>
               <tr>
@@ -318,7 +319,8 @@
     </div>
   </footer>
 
-  <script src="schedule-data.js"></script>
-  <script src="script.js?v=5"></script>
+  <script src="schedule-data.js?v=2"></script>
+  <script src="schedule-loader.js"></script>
+  <script src="script.js?v=6"></script>
 </body>
 </html>

@@ -10,6 +10,8 @@ const cancelAddButton = document.getElementById('cancelAddButton');
 const addMessage = document.getElementById('addMessage');
 const saveMessage = document.getElementById('saveMessage');
 const deadlineRows = document.getElementById('deadlineRows');
+const deadlinePanel = document.getElementById('deadlinePanel');
+const refreshButton = document.getElementById('refreshButton');
 const deadlineCount = document.getElementById('deadlineCount');
 const emptyMessage = document.getElementById('emptyMessage');
 const editDialog = document.getElementById('editDialog');
@@ -127,12 +129,16 @@ function displayTime(value) {
   return `${String(hour % 12 || 12).padStart(2, '0')}:${minute} ${hour >= 12 ? 'PM' : 'AM'}`;
 }
 
-function deadlineStatus(item, now) {
+function deadlineTime(item) {
   const calendarDate = new Date(`${item.due}T00:00:00Z`);
-  if (!Number.isFinite(calendarDate.getTime()) || calendarDate.toISOString().slice(0, 10) !== item.due) return 'Unknown';
-  if (item.time && !/^(?:(?:0?[1-9]|1[0-2]):[0-5]\d\s*(?:AM|PM)|(?:[01]?\d|2[0-3]):[0-5]\d)$/i.test(item.time)) return 'Unknown';
+  if (!Number.isFinite(calendarDate.getTime()) || calendarDate.toISOString().slice(0, 10) !== item.due) return NaN;
+  if (item.time && !/^(?:(?:0?[1-9]|1[0-2]):[0-5]\d\s*(?:AM|PM)|(?:[01]?\d|2[0-3]):[0-5]\d)$/i.test(item.time)) return NaN;
   const time = item.time ? timeForInput(item.time) : '23:59';
-  const due = Date.parse(`${item.due}T${time}:00+05:30`);
+  return Date.parse(`${item.due}T${time}:00+05:30`);
+}
+
+function deadlineStatus(item, now) {
+  const due = deadlineTime(item);
   if (!Number.isFinite(due)) return 'Unknown';
   if (due >= now) return 'Upcoming';
   return now - due > 86400000 ? 'Expired' : 'Overdue';
@@ -141,15 +147,16 @@ function deadlineStatus(item, now) {
 function updateDeadlineStatuses() {
   const now = Date.now();
   let expiredCount = 0;
-  deadlines.forEach((item, index) => {
+  for (const row of deadlineRows.rows) {
+    const item = deadlines[Number(row.dataset.deadlineIndex)];
     const status = deadlineStatus(item, now);
-    const badge = deadlineRows.rows[index]?.querySelector('.deadline-status');
+    const badge = row.querySelector('.deadline-status');
     if (badge) {
       badge.textContent = status;
       badge.dataset.status = status;
     }
     if (status === 'Expired') expiredCount++;
-  });
+  }
   deleteExpiredButton.disabled = !version || saving || expiredCount === 0;
   deleteExpiredButton.textContent = expiredCount ? `Delete all expired (${expiredCount})` : 'Delete all expired';
 }
@@ -159,8 +166,16 @@ function render() {
   deadlineCount.textContent = `${deadlines.length} deadline${deadlines.length === 1 ? '' : 's'}`;
   emptyMessage.hidden = deadlines.length > 0;
 
-  deadlines.forEach((item, index) => {
+  const now = Date.now();
+  const ordered = deadlines.map((item, index) => {
+    const time = deadlineTime(item);
+    const group = !Number.isFinite(time) || time >= now ? 0 : now - time > 86400000 ? 2 : 1;
+    return { item, index, time: Number.isFinite(time) ? time : Infinity, group };
+  }).sort((a, b) => a.group - b.group || (a.group === 0 ? a.time - b.time : b.time - a.time));
+
+  ordered.forEach(({ item, index }) => {
     const row = document.createElement('tr');
+    row.dataset.deadlineIndex = index;
     const values = [item.name, item.subject, `${item.due} · ${item.time ? displayTime(timeForInput(item.time)) : '--'}`, item.duration];
     values.forEach((value, column) => {
       const cell = document.createElement('td');
@@ -224,6 +239,11 @@ async function loadDeadlines() {
   showMessage(saveMessage, preview ? 'Save your changes, then open Preview to see them in this browser.' : '');
 }
 
+function loadDeadlinesWithFeedback(message) {
+  return showScheduleLoading(deadlinePanel, refreshButton, message, loadDeadlines)
+    .catch(error => showMessage(saveMessage, error.message, 'error'));
+}
+
 async function saveDeadlines(next, message = saveMessage) {
   if (!version || saving) return false;
   saving = true;
@@ -248,12 +268,17 @@ async function saveDeadlines(next, message = saveMessage) {
         body: JSON.stringify({ items: normalized, version })
       });
       version = result.version;
+      try { localStorage.setItem(SHARED_SCHEDULE_UPDATE_KEY, version); } catch {}
     }
     deadlines = normalized;
     render();
     showMessage(message, version === 'browser-preview' ? 'Saved in this browser.' : 'Saved.', 'success');
     return true;
   } catch (error) {
+    if (error.status === 401) {
+      showSignIn(error.message);
+      return false;
+    }
     showMessage(message, error.message, 'error');
     return false;
   } finally {
@@ -343,7 +368,7 @@ deleteForm.addEventListener('submit', async (event) => {
     if (await saveDeadlines(next, deleteMessage)) {
       deleteDialog.close();
       showMessage(saveMessage, `Deleted ${count} ${count === 1 ? 'deadline' : 'deadlines'}.`, 'success');
-      document.getElementById('refreshButton').focus();
+      refreshButton.focus();
     }
   } finally {
     confirmDeleteButton.disabled = false;
@@ -371,7 +396,7 @@ loginForm.addEventListener('submit', async (event) => {
     adminShell.hidden = false;
     lastRenewal = Date.now();
     watchSession(session.expiresAt);
-    await loadDeadlines().catch((error) => showMessage(saveMessage, error.message, 'error'));
+    await loadDeadlinesWithFeedback('Loading deadlines');
   } catch (error) {
     showMessage(loginMessage, error.message, 'error');
   } finally {
@@ -413,7 +438,7 @@ editForm.addEventListener('submit', async (event) => {
     if (await saveDeadlines(next, editMessage)) {
       editDialog.close();
       showMessage(saveMessage, 'Deadline updated.', 'success');
-      deadlineRows.rows[editingIndex]?.querySelector('button')?.focus();
+      deadlineRows.querySelector(`[data-deadline-index="${editingIndex}"] button`)?.focus();
     }
   } catch (error) {
     showMessage(editMessage, error.message, 'error');
@@ -424,13 +449,8 @@ cancelEditButton.addEventListener('click', () => editDialog.close());
 editDialog.addEventListener('cancel', (event) => {
   if (saving) event.preventDefault();
 });
-document.getElementById('refreshButton').addEventListener('click', async () => {
-  if (saving) return;
-  try {
-    await loadDeadlines();
-  } catch (error) {
-    showMessage(saveMessage, error.message, 'error');
-  }
+refreshButton.addEventListener('click', () => {
+  if (!saving) return loadDeadlinesWithFeedback('Refreshing');
 });
 document.getElementById('logoutButton').addEventListener('click', async () => {
   if (saving || signingOut) return;
@@ -451,5 +471,5 @@ api('/api/admin/login').then(({ authenticated, expiresAt }) => {
   loginPanel.hidden = true;
   adminShell.hidden = false;
   watchSession(expiresAt);
-  return loadDeadlines().catch((error) => showMessage(saveMessage, error.message, 'error'));
+  return loadDeadlinesWithFeedback('Loading deadlines');
 }).catch((error) => showMessage(loginMessage, error.message, 'error'));

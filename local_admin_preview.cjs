@@ -15,7 +15,7 @@ const routes = new Map([
 
 const files = new Map([
   ['/', 'index.html'], ['/admin', 'admin/index.html'],
-  ...['index.html', 'style.css', 'script.js', 'schedule-data.js', 'schedules.txt',
+  ...['index.html', 'style.css', 'script.js', 'schedule-data.js', 'schedule-loader.js', 'schedule-loader.css', 'schedules.txt',
     'Time_Table.jpg', 'Time_Table.jpeg', 'Time_Table.png',
     'admin/admin.js', 'admin/admin.css'].map((name) => ['/' + name, name])
 ]);

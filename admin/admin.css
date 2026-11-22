@@ -21,3 +21,4 @@
 .list-actions button:disabled,.form-actions button:disabled{opacity:.55;cursor:default}
 
 .message:empty{display:none}
+.icon-button{display:inline-grid;place-items:center;min-width:42px;min-height:42px;padding:8px}
