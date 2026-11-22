@@ -39,6 +39,9 @@ const clearSearchBtn = document.getElementById('clearSearch');
 const subjectFilter = document.getElementById('subjectFilter');
 const sortSelect = document.getElementById('sortSelect');
 const refreshBtn = document.getElementById('refreshBtn');
+const tableCard = document.getElementById('tableCard');
+const scheduleTableRegion = document.getElementById('scheduleTableRegion');
+const scheduleLoadStatus = document.getElementById('scheduleLoadStatus');
 const resultsCount = document.getElementById('resultsCount');
 const resetFiltersBtn = document.getElementById('resetFiltersBtn');
 const fileProtocolBanner = document.getElementById('fileProtocolBanner');
@@ -65,12 +68,36 @@ document.addEventListener('DOMContentLoaded', () => {
   startClock();
   setupEventListeners();
   setupTimetableModal();
-  loadSchedulesData();
+  const pixels = document.querySelector('.schedule-pixels');
+  for (let index = 0; index < 18; index++) {
+    const tile = document.createElement('span');
+    tile.style.setProperty('--pixel-delay', index % 6 + Math.floor(index / 6));
+    pixels.append(tile);
+  }
+  loadScheduleWithFeedback('Loading schedule');
 });
 
 window.addEventListener('storage', (event) => {
   if (event.key === BROWSER_PREVIEW_KEY) loadSchedulesData();
 });
+
+async function loadScheduleWithFeedback(message) {
+  refreshBtn.disabled = true;
+  tableCard.setAttribute('data-loading', '');
+  scheduleTableRegion.setAttribute('aria-busy', 'true');
+  scheduleLoadStatus.textContent = message;
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  try {
+    await Promise.all([
+      loadSchedulesData(),
+      new Promise(resolve => setTimeout(resolve, reducedMotion ? 0 : 520))
+    ]);
+  } finally {
+    tableCard.removeAttribute('data-loading');
+    scheduleTableRegion.setAttribute('aria-busy', 'false');
+    refreshBtn.disabled = false;
+  }
+}
 
 // Theme Manager (Dark & Light Mode, default: Dark)
 function initTheme() {
@@ -292,7 +319,6 @@ async function loadSchedulesData() {
         if (parsed && parsed.length > 0) {
           rawSchedules = parsed;
           localStorage.setItem(STORAGE_KEY, JSON.stringify(rawSchedules));
-          showToast('Live synced with Google Sheet! 📊');
           processAndRender();
           return;
         }
@@ -310,7 +336,6 @@ async function loadSchedulesData() {
       const parsed = parseTxtContent(textData);
       if (parsed && parsed.length > 0) {
         rawSchedules = parsed;
-        showToast('Loaded schedules from local file');
         processAndRender();
         return;
       }
@@ -678,10 +703,7 @@ function setupEventListeners() {
   }
 
   if (refreshBtn) {
-    refreshBtn.addEventListener('click', () => {
-      showToast('Checking for latest schedules.txt...');
-      loadSchedulesData();
-    });
+    refreshBtn.addEventListener('click', () => loadScheduleWithFeedback('Refreshing'));
   }
 
   if (resetFiltersBtn) {
@@ -719,9 +741,9 @@ function setupEventListeners() {
         if (parsed && parsed.length > 0) {
           rawSchedules = parsed;
           localStorage.setItem(STORAGE_KEY, JSON.stringify(rawSchedules));
-          if (syncStatus) syncStatus.textContent = file.name;
+          if (syncStatus) syncStatus.textContent = 'Schedule loaded';
           if (syncStatusSub) syncStatusSub.textContent = 'Manually loaded text file';
-          showToast(`Successfully loaded ${parsed.length} schedules from ${file.name}`);
+          showToast(`Loaded ${parsed.length} schedule entries`);
           processAndRender();
         } else {
           showToast('Could not find schedule rows in that file.');
@@ -743,8 +765,6 @@ function setupEventListeners() {
 function setupTimetableModal() {
   const modal = document.getElementById('timetableModal');
   const openCard = document.getElementById('openTimetableCard');
-  const openBtn = document.getElementById('openTimetableBtn');
-  const openFooterBtn = document.getElementById('openTimetableFooterBtn');
   const closeBtn = document.getElementById('closeTimetableBtn');
 
   function openModal() {
@@ -769,8 +789,6 @@ function setupTimetableModal() {
     });
   }
 
-  if (openBtn) openBtn.addEventListener('click', openModal);
-  if (openFooterBtn) openFooterBtn.addEventListener('click', openModal);
   if (closeBtn) closeBtn.addEventListener('click', closeModal);
 
   if (modal) {
@@ -809,5 +827,5 @@ function exportCurrentSchedulesToTxt() {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  showToast('Downloaded schedules.txt');
+  showToast('Schedule downloaded');
 }

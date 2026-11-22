@@ -4,6 +4,10 @@ const loginForm = document.getElementById('loginForm');
 const loginMessage = document.getElementById('loginMessage');
 const signInButton = loginForm.querySelector('button[type="submit"]');
 const deadlineForm = document.getElementById('deadlineForm');
+const addDialog = document.getElementById('addDialog');
+const openAddDeadlineButton = document.getElementById('openAddDeadlineButton');
+const cancelAddButton = document.getElementById('cancelAddButton');
+const addMessage = document.getElementById('addMessage');
 const saveMessage = document.getElementById('saveMessage');
 const deadlineRows = document.getElementById('deadlineRows');
 const deadlineCount = document.getElementById('deadlineCount');
@@ -47,6 +51,7 @@ function showSignIn(message) {
   clearTimeout(idleTimer);
   expiresAt = 0;
   version = '';
+  if (addDialog.open) addDialog.close();
   if (editDialog.open) editDialog.close();
   if (deleteDialog.open) deleteDialog.close();
   adminShell.hidden = true;
@@ -169,7 +174,8 @@ function render() {
     });
 
     const actions = document.createElement('td');
-    actions.className = 'row-actions';
+    const actionButtons = document.createElement('div');
+    actionButtons.className = 'row-actions';
     const editButton = document.createElement('button');
     editButton.type = 'button';
     editButton.className = 'secondary';
@@ -180,7 +186,8 @@ function render() {
     deleteButton.className = 'secondary delete-button';
     deleteButton.textContent = 'Delete';
     deleteButton.addEventListener('click', () => confirmDeletion([item]));
-    actions.append(editButton, deleteButton);
+    actionButtons.append(editButton, deleteButton);
+    actions.appendChild(actionButtons);
     row.appendChild(actions);
     deadlineRows.appendChild(row);
   });
@@ -191,7 +198,7 @@ async function loadDeadlines() {
   showMessage(saveMessage, 'Loading deadlines…');
   version = '';
   deleteExpiredButton.disabled = true;
-  saveDeadlineButton.disabled = true;
+  openAddDeadlineButton.disabled = true;
   const data = await api('/api/deadlines').catch((error) => {
     deadlineCount.textContent = 'Schedule unavailable';
     throw error;
@@ -213,7 +220,7 @@ async function loadDeadlines() {
   }));
   version = data.version;
   render();
-  saveDeadlineButton.disabled = false;
+  openAddDeadlineButton.disabled = false;
   showMessage(saveMessage, preview ? 'Save your changes, then open Preview to see them in this browser.' : '');
 }
 
@@ -224,6 +231,8 @@ async function saveDeadlines(next, message = saveMessage) {
   confirmEditButton.disabled = true;
   cancelEditButton.disabled = true;
   saveDeadlineButton.disabled = true;
+  cancelAddButton.disabled = true;
+  openAddDeadlineButton.disabled = true;
   showMessage(message, 'Saving to the website…');
   try {
     const normalized = next.map((item, index) => ({ ...item, sn: index + 1 }));
@@ -253,6 +262,8 @@ async function saveDeadlines(next, message = saveMessage) {
     confirmEditButton.disabled = false;
     cancelEditButton.disabled = false;
     saveDeadlineButton.disabled = false;
+    cancelAddButton.disabled = false;
+    openAddDeadlineButton.disabled = !version;
   }
 }
 
@@ -368,12 +379,28 @@ loginForm.addEventListener('submit', async (event) => {
   }
 });
 
+openAddDeadlineButton.addEventListener('click', () => {
+  if (!version || saving || addDialog.open) return;
+  resetAddForm();
+  showMessage(addMessage, '');
+  addDialog.showModal();
+});
+cancelAddButton.addEventListener('click', () => addDialog.close());
+addDialog.addEventListener('cancel', (event) => {
+  if (saving) event.preventDefault();
+});
+
 deadlineForm.addEventListener('submit', async (event) => {
   event.preventDefault();
+  if (!addDialog.open || saving) return;
   try {
-    if (await saveDeadlines([...deadlines, readDeadline(deadlineForm)])) resetAddForm();
+    if (await saveDeadlines([...deadlines, readDeadline(deadlineForm)], addMessage)) {
+      addDialog.close();
+      showMessage(saveMessage, 'Deadline added.', 'success');
+      openAddDeadlineButton.focus();
+    }
   } catch (error) {
-    showMessage(saveMessage, error.message, 'error');
+    showMessage(addMessage, error.message, 'error');
   }
 });
 
@@ -418,8 +445,6 @@ document.getElementById('logoutButton').addEventListener('click', async () => {
     signingOut = false;
   }
 });
-
-resetAddForm();
 
 api('/api/admin/login').then(({ authenticated, expiresAt }) => {
   if (!authenticated || !adminShell.hidden) return;

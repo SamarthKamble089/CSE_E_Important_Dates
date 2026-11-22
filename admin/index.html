@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <title>Admin | CSE-E Important Dates</title>
-  <link rel="stylesheet" href="/admin/admin.css">
+  <link rel="stylesheet" href="/admin/admin.css?v=2">
 </head>
 <body>
   <main class="page">
@@ -35,20 +35,11 @@
         </div>
       </header>
 
-      <section class="panel form-panel">
-        <h2>Add a deadline</h2>
-        <form id="deadlineForm" class="form-grid">
-          <div class="form-actions wide">
-            <button class="primary" id="saveDeadlineButton" type="submit">Add deadline</button>
-          </div>
-        </form>
-        <p class="message" id="saveMessage" role="status"></p>
-      </section>
-
       <section class="panel list-panel">
         <div class="list-heading">
           <div><h2>Current deadlines</h2><p class="muted" id="deadlineCount">Loading…</p></div>
           <div class="list-actions">
+            <button class="primary" id="openAddDeadlineButton" type="button" disabled>Add deadline</button>
             <button class="secondary delete-button" id="deleteExpiredButton" type="button" disabled>Delete all expired</button>
             <button class="secondary" id="refreshButton" type="button">Refresh</button>
           </div>
@@ -59,8 +50,19 @@
             <tbody id="deadlineRows"></tbody>
           </table>
         </div>
-        <p class="empty" id="emptyMessage" hidden>No deadlines yet. Add one using the form above.</p>
+        <p class="empty" id="emptyMessage" hidden>No deadlines yet.</p>
+        <p class="message" id="saveMessage" role="status"></p>
       </section>
+      <dialog id="addDialog" class="panel edit-dialog" aria-labelledby="addHeading">
+        <h2 id="addHeading">Add a deadline</h2>
+        <form id="deadlineForm" class="form-grid">
+          <div class="form-actions wide">
+            <button class="primary" id="saveDeadlineButton" type="submit">Add deadline</button>
+            <button class="secondary" id="cancelAddButton" type="button">Cancel</button>
+          </div>
+        </form>
+        <p class="message" id="addMessage" role="status"></p>
+      </dialog>
       <dialog id="editDialog" class="panel edit-dialog" aria-labelledby="editHeading">
         <h2 id="editHeading">Edit deadline</h2>
         <form id="editForm" class="form-grid">
@@ -103,6 +105,6 @@
     </fieldset>
   </template>
   <script src="/schedule-data.js" defer></script>
-  <script src="/admin/admin.js" defer></script>
+  <script src="/admin/admin.js?v=2" defer></script>
 </body>
 </html>
