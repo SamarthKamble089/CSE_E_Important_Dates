@@ -1,4 +1,8 @@
 const loginPanel = document.getElementById('loginPanel');
+const googleAdmin = typeof requestGoogleAdmin === 'function';
+const hostedEditor = !googleAdmin && typeof googleSchedule !== 'undefined' && !['localhost', '127.0.0.1'].includes(location.hostname)
+  ? googleSchedule.editorUrl : '';
+if (hostedEditor) location.replace(hostedEditor);
 const adminShell = document.getElementById('adminShell');
 const loginForm = document.getElementById('loginForm');
 const loginMessage = document.getElementById('loginMessage');
@@ -77,7 +81,7 @@ function recordActivity(event) {
   }
   if (now - lastRenewal < 5000) return;
   lastRenewal = now;
-  renewal = api('/api/admin/login', { method: 'PATCH', signal: AbortSignal.timeout(8000) })
+  renewal = api('/api/admin/login', { method: 'PATCH', signal: AbortSignal.timeout(12000) })
     .then(({ expiresAt }) => {
       if (!adminShell.hidden && !signingOut) watchSession(expiresAt);
     })
@@ -97,6 +101,7 @@ function showMessage(element, message, kind = '') {
 }
 
 async function api(url, options = {}) {
+  if (googleAdmin) return requestGoogleAdmin(url, options);
   const response = await fetch(url, {
     ...options,
     headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
@@ -387,7 +392,7 @@ loginForm.addEventListener('submit', async (event) => {
   try {
     const session = await api('/api/admin/login', {
       method: 'POST',
-      body: JSON.stringify({
+      body: googleAdmin ? undefined : JSON.stringify({
         username: document.getElementById('username').value.trim(),
         password: document.getElementById('password').value
       })
@@ -466,7 +471,7 @@ document.getElementById('logoutButton').addEventListener('click', async () => {
   }
 });
 
-api('/api/admin/login').then(({ authenticated, expiresAt }) => {
+if (!hostedEditor) api('/api/admin/login').then(({ authenticated, expiresAt }) => {
   if (!authenticated || !adminShell.hidden) return;
   loginPanel.hidden = true;
   adminShell.hidden = false;

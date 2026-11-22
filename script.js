@@ -76,8 +76,8 @@ window.addEventListener('storage', (event) => {
 });
 
 setInterval(() => {
-  if (sharedScheduleActive && !document.hidden && !refreshBtn.disabled) loadSchedulesData();
-}, 30000);
+  if (!document.hidden && !refreshBtn.disabled) loadScheduleWithFeedback('Refreshing');
+}, 300000);
 
 function loadScheduleWithFeedback(message) {
   return showScheduleLoading(tableCard, refreshBtn, message, loadSchedulesData);

@@ -4,6 +4,7 @@
 .env
 .env.*
 !.env.example
+google-drive/Admin.html
 
 # OS files
 Thumbs.db

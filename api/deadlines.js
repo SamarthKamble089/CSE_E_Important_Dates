@@ -4,6 +4,7 @@ const path = require('node:path');
 const { GOOGLE_SHEETS_CSV_URL, parseTxtContent } = require('../schedule-data');
 const { readSession, demoMode } = require('./_lib/auth');
 const { sharedSchedule, readSharedSchedule, writeSharedSchedule } = require('./_lib/shared-schedule');
+const googleSchedule = require('../site-config');
 
 const OWNER = process.env.GITHUB_OWNER || 'SamarthKamble089';
 const REPOSITORY = process.env.GITHUB_REPOSITORY || 'CSE_E_Important_Dates';
@@ -76,6 +77,18 @@ async function readFile(token) {
 module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store, max-age=0');
   const token = process.env.GITHUB_TOKEN;
+  if (googleSchedule.feedUrl && process.env.CSEE_LOCAL_PREVIEW !== '1') {
+    if (req.method !== 'GET') return res.status(405).json({ error: 'Use the Google-hosted editor to save deadlines.' });
+    try {
+      const response = await fetch(googleSchedule.feedUrl, { cache: 'no-store', signal: AbortSignal.timeout(10000) });
+      if (!response.ok) throw new Error('Schedule feed unavailable.');
+      const { text } = await response.json();
+      if (typeof text !== 'string') throw new Error('Invalid schedule feed.');
+      return res.status(200).json({ items: parseTxtContent(text), shared: true });
+    } catch {
+      return res.status(502).json({ error: 'Could not load the Drive schedule.', shared: true });
+    }
+  }
   if (req.method === 'GET') {
     try {
       if (sharedSchedule) {
